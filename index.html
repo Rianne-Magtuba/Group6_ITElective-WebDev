@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bootstrap</title>
+   
+    <!-- Bootstrap CSS -->
+    <link  href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"  rel="stylesheet" />
+   
+    <!-- Font Awesome -->
+ 
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
+
+     <!-- Google Fonts: Josefina Sans -->
+  <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans&display=swap" rel="stylesheet">
+
+
+    <link href="css/styles.css" rel="stylesheet" />
+  </head>
+ 
+      <!-- main container -->
+<body>
+  <!-- Navbar -->
+<nav id="navbar" class="navbar navbar-expand-lg navbar-light fixed-top shadow-sm">
+  <div class="container">
+    <a class="navbar-brand d-flex align-items-center" href="#">
+      <i class="fa-solid fa-lightbulb fa-lg me-2"></i> CramTayo
+    </a>
+
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMenu">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="navbarMenu">
+
+      <!-- Left Links -->
+    <ul class="navbar-nav ms-auto">
+  <li class="nav-item"><a class="nav-link active" href="#home">Home</a></li>
+  <li class="nav-item"><a class="nav-link" href="#subjects">Subjects</a></li>
+  <li class="nav-item"><a class="nav-link" href="#about">About</a></li>
+</ul>
+
+
+      <!-- Sign In Button -->
+      <div class="ms-lg-3 mt-3 mt-lg-0">
+       <button id="signInBtn" class="btn btn-outline-light rounded-pill ms-3" 
+        data-bs-toggle="modal" data-bs-target="#authMainModal">
+  Sign In
+</button>
+
+      </div>
+
+    </div>
+  </div>
+</nav>
+
+
+  <!-- Photo Section -->
+<div id="home" class="photo-section d-flex align-items-center justify-content-center"  style="background-image: url('img/crammingcover.jpeg')">
+  <div class="photo-text text-center">
+    <h1 class="display-4 fw-bold mb-3">Let's Review with CramTayo!</h1>
+    <p class="lead mb-5">where you review, last minute.</p>
+
+    <!-- search bar -->
+    <form class="d-flex justify-content-center" role="search">
+      <input class="form-control rounded-pill me-2" type="search" placeholder="Search" aria-label="Search">
+      <button class="btn btn-outline-light rounded-pill" type="submit">
+        <i class="fa-solid fa-magnifying-glass"></i>
+      </button>
+    </form>
+  </div>
+</div>
+
+
+<!-- Cards Section -->
+<div id="subjects" class="cards-section py-5 bgColor">
+  <div class="container text-center mb-5">
+    <h2 class="fw-bold cardTxt">Subjects</h2>
+    <p class="lead cardTxt">What's there to review? </p>
+  </div>
+
+  <div class="container">
+    <div class="row g-5 justify-content-center"> <!-- increased gutter from g-4 to g-5 -->
+      
+      <!-- Card 1 -->
+      <div class="col-md-6 col-lg-4 fade-in" >
+        <div class="card shadow-sm h-100">
+          <img src="img/webdevCard.png" class="card-img-top" alt="Card 1 Photo">
+          <div class="card-body text-justify">
+            <h5 class="card-title text-center cardTxt">Web Development</h5>
+            <p class="card-text text-center cardTxt">Intro to WebDev? HTML? CSS? CRUD? Come on down and review!</p>
+            <div class="d-flex justify-content-center">
+    <a href="webDevSubj.html" class="btn btn-primary">View</a>
+  </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Card 2 -->
+      <div class="col-md-6 col-lg-4 fade-in">
+        <div class="card shadow-sm h-100">
+          <img src="img/dbaCard.png" class="card-img-top" alt="Card 2 Photo">
+          <div class="card-body text-justify">
+            <h5 class="card-title text-center cardTxt">Database Administration</h5>
+            <p class="card-text text-center cardTxt">CANUIA? MESIR? AAEA? Learn what these acronymns mean!</p>
+           <div class="d-flex justify-content-center">
+    <a href="#" class="btn btn-primary">View</a>
+  </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+<!-- Carousel + Text Section -->
+<div id="about" class="carousel-text-section py-5 fade-in">
+  <div class="container">
+    <div class="row align-items-center">
+      
+      <!-- Carousel Column -->
+      <div class="col-lg-6 mb-4 mb-lg-0">
+        <div id="carouselExampleSlide" class="carousel slide" data-bs-ride="carousel" data-bs-interval="3000">
+          <div class="carousel-inner">
+            <div class="carousel-item active">
+              <img src="img/caro1.jpeg" class="d-block w-100" alt="caro1" >
+            </div>
+            <div class="carousel-item">
+              <img src="img/car2.jpeg" class="d-block w-100" alt="caro2" >
+            </div>
+            <div class="carousel-item">
+              <img src="img/caro3.jpg" class="d-block w-100" alt="caro3" >
+            </div>
+          </div>
+          <button class="carousel-control-prev" type="button" data-bs-target="#carouselExampleSlide" data-bs-slide="prev">
+            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Previous</span>
+          </button>
+          <button class="carousel-control-next" type="button" data-bs-target="#carouselExampleSlide" data-bs-slide="next">
+            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Next</span>
+          </button>
+        </div>
+      </div>
+      
+      <!-- Text Column -->
+      <div class="col-lg-6">
+        <h2 class="fw-bold mb-3">Did you know?</h2>
+        <p class="lead mb-4">Cramming has negative effects on students, including increased stress and anxiety, decreased long-term retention, and poor sleep. 
+          However, It can also be effective for remembering a large volume of facts or details for a very brief period. Does it actually help you?</p>
+        <a href="https://www.topuniversities.com/blog/does-cramming-your-exams-actually-work" class="btn btn-primary btn-lg">Find out more</a>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- About Us Section -->
+<div class="about-section py-5 fade-in">
+  <div class="container text-center">
+
+    <!-- Section Title -->
+    <h2 class="about-title fw-bold mb-2">About Us</h2>
+    <div class="about-divider mx-auto mb-4"></div>
+
+    <!-- Description -->
+    <p class="about-desc mb-5">
+      This is a front-end web design made with Bootstrap elements for the IT Elective subject by Sir Rowell Marquina. We are Group 6.
+    </p>
+
+    <!-- Team Members -->
+    <div class="row justify-content-center g-4">
+
+      <div class="col-6 col-md-4 col-lg-2">
+        <div class="team-member text-center">
+          <i class="fas fa-user-circle fa-4x mb-2"></i>
+          <h6 class="fw-bold mb-0">Charmaine Bering</h6>
+        </div>
+      </div>
+
+      <div class="col-6 col-md-4 col-lg-2">
+        <div class="team-member text-center">
+          <i class="fas fa-user-circle fa-4x mb-2"></i>
+          <h6 class="fw-bold mb-0">John Lexter Bartolome Reyes</h6>
+        </div>
+      </div>
+
+      <div class="col-6 col-md-4 col-lg-2">
+        <div class="team-member text-center">
+          <i class="fas fa-user-circle fa-4x mb-2"></i>
+          <h6 class="fw-bold mb-0">Rayver Reyes</h6>
+        </div>
+      </div>
+
+      <div class="col-6 col-md-4 col-lg-2">
+        <div class="team-member text-center">
+          <i class="fas fa-user-circle fa-4x mb-2"></i>
+          <h6 class="fw-bold mb-0">Riyle Lhane Mapanoo</h6>
+        </div>
+      </div>
+
+      <div class="col-6 col-md-4 col-lg-2">
+        <div class="team-member text-center">
+          <i class="fas fa-user-circle fa-4x mb-2"></i>
+          <h6 class="fw-bold mb-0">Rianne Magtuba</h6>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Footer -->
+<footer class="footer py-5 fade-in">
+  <div class="container">
+    <div class="row align-items-start">
+
+      <!-- Left Side: Brand -->
+      <div class="col-md-5 mb-4 mb-md-0 d-flex align-items-center">
+        <h5 class="footer-brand d-flex align-items-center mb-0">
+          <i class="fa-solid fa-lightbulb me-3"></i> CramTayo
+        </h5>
+      </div>
+
+      <!-- Separator Column -->
+      <div class="col-md-1 d-none d-md-flex justify-content-center">
+        <div class="footer-separator"></div>
+      </div>
+
+      <!-- Right Side: Get in Touch -->
+      <div class="col-md-6 text-start">
+        <p class="fw-bold mb-2 mt-2">Get in Touch</p>
+        <ul class="list-unstyled footer-contact">
+          <li class="mb-2 mt-1">
+            <i class="fab fa-facebook me-2"></i> Facebook
+          </li>
+          <li class="mb-2 mt-1">
+            <i class="fab fa-instagram me-2"></i> Instagram
+          </li>
+          <li class="mb-2 mt-1">
+            <i class="fas fa-phone me-2"></i> Phone
+          </li>
+          <li class="mb-2 mt-1">
+            <i class="fas fa-envelope me-2"></i> Email
+          </li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+</footer>
+
+
+
+<!-- MAIN SIGN-IN MODAL -->
+<div class="modal fade" id="authMainModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-wide">
+    <div class="modal-content p-4">
+
+      <div class="modal-header border-0 pb-1">
+        <h5 class="modal-title fw-bold">Welcome to CramTayo!</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body ">
+
+        <p class="text-muted mb-4 fs-5">where we cram regularly</p>
+
+        <!-- Google -->
+        <button class="btn btn-outline-dark w-100 py-2 mb-3">
+          <i class="fab fa-google me-2"></i> Continue with Google
+        </button>
+
+        <!-- Facebook -->
+        <button class="btn btn-primary w-100 py-2 mb-3">
+          <i class="fab fa-facebook me-2"></i> Continue with Facebook
+        </button>
+
+        <!-- Apple -->
+        <button class="btn btn-dark w-100 py-2 mb-4">
+          <i class="fab fa-apple me-2"></i> Continue with Apple
+        </button>
+
+        <div class="d-flex align-items-center my-4">
+          <div class="flex-grow-1 border-top "></div>
+          <span class="mx-3 text-muted">or continue with email</span>
+          <div class="flex-grow-1 border-top"></div>
+        </div>
+
+        <div class="d-flex justify-content-between">
+          <button class="btn btn-outline-secondary w-50 me-2 py-2"
+                  data-bs-target="#loginEmailModal" data-bs-toggle="modal">
+            Log in with Email
+          </button>
+
+          <button class="btn btn-outline-secondary w-50 py-2"
+                  data-bs-target="#registerEmailModal" data-bs-toggle="modal">
+            Sign up with Email
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LOGIN WITH EMAIL MODAL -->
+<div class="modal fade" id="loginEmailModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-wide">
+    <div class="modal-content p-4">
+
+      <div class="modal-header border-0">
+        <button class="btn btn-link importantTxtColors fw-bold modal-back-btn"
+                data-bs-target="#authMainModal" data-bs-toggle="modal">
+          &lt; Log in with Email
+        </button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body px-3">
+
+        <label class="form-label mt-2">Email Address</label>
+        <input type="email" class="form-control mb-4 py-2">
+
+        <label class="form-label">Password</label>
+        <input type="password" class="form-control mb-2 py-2">
+
+        <div class="text-end mb-4">
+          <a href="#" class="importantTxtColors small">Forgot password?</a>
+        </div>
+
+        <button class="btn btn-primary w-100 py-2 mb-3">Log In</button>
+
+        <p class="text-center mt-3">
+          Don't have an account?
+          <a href="#" class="importantTxtColors fw-bold"
+             data-bs-target="#registerEmailModal" data-bs-toggle="modal">
+            Sign Up!
+          </a>
+        </p>
+
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- REGISTER MODAL -->
+<div class="modal fade" id="registerEmailModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content p-3">
+
+      <div class="modal-header border-0">
+        <button class="btn btn-link importantTxtColors"
+                data-bs-target="#authMainModal" data-bs-toggle="modal">
+          &lt; Register with Email
+        </button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+
+        <label class="form-label">Username</label>
+        <input type="text" class="form-control mb-3">
+
+        <label class="form-label">Email</label>
+        <input type="email" class="form-control mb-3">
+
+        <label class="form-label">Password</label>
+        <input type="password" class="form-control mb-4">
+
+        <button class="btn btn-success w-100 mb-3">Register</button>
+
+        <p class="text-center small">
+          Already have an account?
+          <a href="#" class="importantTxtColors"
+             data-bs-target="#loginEmailModal" data-bs-toggle="modal">
+            Sign In!
+          </a>
+        </p>
+
+        <hr>
+
+        <p class="text-muted small text-center ">
+          By signing up, you agree to CramTayo’s
+          <a href="#" class="importantTxtColors">Terms of Use</a> and <a href="#" class="importantTxtColors">Privacy Policy</a>.
+        </p>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/script.js"></script>
+  </body>
+</html>
