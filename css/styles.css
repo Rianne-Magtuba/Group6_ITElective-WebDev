@@ -334,44 +334,74 @@ section {
   color: #55392e !important;
 }
 
+/* ===== Review grid (responsive) ===== */
 .review-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); /* responsive columns */
   gap: 1.5rem;
+  width: 100%;
+  box-sizing: border-box;
+  align-items: start; /* align card tops */
 }
 
+/* Card base */
 .review-card {
-  background-color: #fff;
-  border-radius: 15px;
-  border: 1px solid #ddd;
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e6e6e6;
   padding: 1rem;
-  box-shadow: 0 6px 12px rgba(0,0,0,0.1);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 0 6px 12px rgba(0,0,0,0.06);
+  transition: transform .28s ease, box-shadow .28s ease;
+  box-sizing: border-box;
+  min-height: 1px; /* prevents collapse in grid */
 }
 
+/* Default hover (Tab 1 & 2 style) */
 .review-card:hover {
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25); /* your current hover shadow */
-    transform: translateY(-5px);
-    transition: all 0.3s ease;
+  transform: translateY(-8px) scale(1.01);
+  box-shadow: 0 14px 30px rgba(0,0,0,0.14);
 }
 
+/* long-card: controlled column span on larger screens */
 .review-card.long-card {
-  grid-column: span 2; /* spans 2 columns */
+  /* default: span 1 (small screens) */
+  grid-column: auto;
 }
 
-@media (max-width: 768px) {
+/* make long-card span 2 columns on medium+ screens */
+@media (min-width: 900px) {
   .review-card.long-card {
-    grid-column: span 1; /* stack on mobile */
+    grid-column: span 2;
   }
 }
-.code-box {
-  background-color: #f8f9fa; /* light grey background */
-  border: 1px solid #ddd;    /* subtle border */
-  padding: 10px;
-  border-radius: 5px;
-  overflow-x: auto;           /* horizontal scroll if code is long */
-  font-family: monospace;
-  font-size: 0.9rem;
+
+/* if you want one special card to span 3 on very wide screens */
+@media (min-width: 1400px) {
+  .review-card.long-card--wide {
+    grid-column: span 3;
+  }
 }
 
+/* Tab 3 specific lighter hover (keeps previous request) */
+#tab-mysql .review-card:hover {
+  transform: translateY(-4px) scale(1.005);
+  box-shadow: 0 6px 14px rgba(0,0,0,0.12);
+}
 
+/* Make code boxes consistent inside cards */
+.review-card pre.code-box {
+  background: #f8f9fa;
+  border: 1px solid #e1e1e1;
+  padding: .75rem;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Segoe UI Mono", monospace;
+  font-size: .92rem;
+  margin-top: .5rem;
+}
+
+/* ensure list cards' content flows well */
+.review-card ul { margin: .4rem 0 0 0; padding-left: 1rem; }
+
+/* make sure the review-grid sits nicely inside container/padding */
+.tab-pane .review-grid { padding: 0; }
