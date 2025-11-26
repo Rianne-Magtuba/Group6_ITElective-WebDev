@@ -302,7 +302,7 @@ section {
 
 /* Navbar initial state */
 .navbar-main {
-  background: transparent;
+  background: #ffffff;
   transition: 0.3s ease;
 }
 
