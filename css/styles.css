@@ -364,6 +364,17 @@ section {
     grid-column: span 1; /* stack on mobile */
   }
 }
+
+.review-card.long-card-4 {
+  grid-column: span 4; /* spans 4 columns on desktop */
+}
+
+@media (max-width: 768px) {
+  .review-card.long-card-4 {
+    grid-column: span 1; /* full width on mobile */
+  }
+}
+
 .code-box {
   background-color: #f8f9fa; /* light grey background */
   border: 1px solid #ddd;    /* subtle border */
