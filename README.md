@@ -10,6 +10,7 @@ username VARCHAR(100) NOT NULL,
 password VARCHHAR(100) NOT NULL
 );
 
+USE cramtayo_db;
 CREATE TABLE subjects (
 id int AUTO_INCREMENT PRIMARY KEY,
 user_id int,
