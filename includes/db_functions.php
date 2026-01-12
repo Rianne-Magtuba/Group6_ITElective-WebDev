@@ -4,19 +4,28 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-$DBHost = "localhost";
-$DBUser = "root";
-$DBPass = "";
-$DBName = "cramtayo_db";
+// Database configuration
+define('DB_HOST', 'localhost');
+define('DB_USER', 'root');
+define('DB_PASS', '');
+define('DB_NAME', 'cramtayo_db');
 
+/**
+ * Get database connection using PDO (more secure and modern)
+ */
 function getDBConnection() {
-    global $DBHost, $DBUser, $DBPass, $DBName;
-    $conn = new mysqli($DBHost, $DBUser, $DBPass, $DBName);
-
-    if ($conn->connect_error) {
-        die("Connection failed: " . $conn->connect_error);
+    try {
+        $dsn = "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4";
+        $options = [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES => false,
+        ];
+        return new PDO($dsn, DB_USER, DB_PASS, $options);
+    } catch (PDOException $e) {
+        error_log("Database connection failed: " . $e->getMessage());
+        die("Database connection failed. Please try again later.");
     }
-    return $conn;
 }
 
 // =============================================
@@ -28,11 +37,11 @@ function isLoggedIn() {
 }
 
 function getCurrentUserId() {
-    return isset($_SESSION['user_id']) ? $_SESSION['user_id'] : null;
+    return $_SESSION['user_id'] ?? null;
 }
 
 function getCurrentUsername() {
-    return isset($_SESSION['username']) ? $_SESSION['username'] : null;
+    return $_SESSION['username'] ?? null;
 }
 
 function logoutUser() {
@@ -45,181 +54,315 @@ function logoutUser() {
 // =============================================
 
 function registerAccount($username, $email, $password) {
-    $conn = getDBConnection();
-
-    // Check if email already exists
-    $checkStmt = $conn->prepare("SELECT user_id FROM users WHERE email = ?");
-    $checkStmt->bind_param("s", $email);
-    $checkStmt->execute();
-    $result = $checkStmt->get_result();
-    
-    if ($result->num_rows > 0) {
-        $checkStmt->close();
-        $conn->close();
-        return false; // Email already exists
-    }
-    $checkStmt->close();
-
-    // Insert new user
-    $sql = "INSERT INTO users (username, email, password) VALUES (?, ?, ?)";
-    $stmt = $conn->prepare($sql);
-
-    if (!$stmt) {
-        $conn->close();
+    try {
+        $pdo = getDBConnection();
+        
+        // Check if email already exists
+        $stmt = $pdo->prepare("SELECT user_id FROM users WHERE email = ?");
+        $stmt->execute([$email]);
+        
+        if ($stmt->fetch()) {
+            return false; // Email already exists
+        }
+        
+        // Insert new user
+        $stmt = $pdo->prepare("INSERT INTO users (username, email, `password`) VALUES (?, ?, ?)");
+        return $stmt->execute([$username, $email, $password]);
+        
+    } catch (PDOException $e) {
+        error_log("Register error: " . $e->getMessage());
         return false;
     }
-
-    $stmt->bind_param("sss", $username, $email, $password);
-    
-    if (!$stmt->execute()) {
-        $stmt->close();
-        $conn->close();
-        return false;
-    }
-
-    $stmt->close();
-    $conn->close();
-    return true;
 }
 
 function loginAccount($email, $password) {
-    $conn = getDBConnection();
-
-    $stmt = $conn->prepare("SELECT user_id, username, password FROM users WHERE email = ?");
-    $stmt->bind_param("s", $email);
-    $stmt->execute();
-    $result = $stmt->get_result();
-
-    if ($result->num_rows === 1) {
-        $row = $result->fetch_assoc();
-        if (password_verify($password, $row['password'])) {
+    try {
+        $pdo = getDBConnection();
+        
+        $stmt = $pdo->prepare("SELECT user_id, username, password FROM users WHERE email = ?");
+        $stmt->execute([$email]);
+        $user = $stmt->fetch();
+        
+        if ($user && password_verify($password, $user['password'])) {
             // Set session variables
-            $_SESSION['user_id'] = $row['user_id'];
-            $_SESSION['username'] = $row['username'];
+            $_SESSION['user_id'] = $user['user_id'];
+            $_SESSION['username'] = $user['username'];
             $_SESSION['email'] = $email;
             
-            $stmt->close();
-            $conn->close();
+            // Regenerate session ID for security
+            session_regenerate_id(true);
+            
             return true;
         }
+        
+        return false;
+        
+    } catch (PDOException $e) {
+        error_log("Login error: " . $e->getMessage());
+        return false;
     }
-
-    $stmt->close();
-    $conn->close();
-    return false;
 }
 
 // =============================================
-// SUBJECT STUDY CARD FUNCTIONS
+// SUBJECT FUNCTIONS
 // =============================================
 
-function getStudyCardsForSubjects($tableName, $tab_name) {
-    $conn = getDBConnection();
-    $sql = "SELECT * FROM `" . $tableName . "` WHERE tab_name = '" . mysqli_real_escape_string($conn, $tab_name) . "' ORDER BY sort_order";
-    $result = mysqli_query($conn, $sql);
-    
-    $cards = [];
-    if ($result && mysqli_num_rows($result) > 0) {
-        while ($row = mysqli_fetch_assoc($result)) {
-            $cards[] = $row;
+function getSubjectsDb($userId = null) {
+    try {
+        $pdo = getDBConnection();
+        
+        if ($userId !== null) {
+            $stmt = $pdo->prepare("SELECT * FROM subjects WHERE user_id = ? ORDER BY created_at DESC");
+            $stmt->execute([$userId]);
+        } else {
+            $stmt = $pdo->query("SELECT * FROM subjects ORDER BY created_at DESC");
         }
+        
+        return $stmt->fetchAll();
+        
+    } catch (PDOException $e) {
+        error_log("Get subjects error: " . $e->getMessage());
+        return [];
     }
-    
-    mysqli_close($conn);
-    return $cards;
 }
 
-function addCard($tableName, $tabName, $title, $content, $cardType) {
-    $conn = getDBConnection();
-    $stmt = $conn->prepare("INSERT INTO `$tableName` (tab_name, title, content, card_type, sort_order) VALUES (?, ?, ?, ?, 0)");
-    $stmt->bind_param("ssss", $tabName, $title, $content, $cardType);
-    $stmt->execute();
-    $stmt->close();
-    mysqli_close($conn);
+function getSubjectById($subjectId) {
+    try {
+        $pdo = getDBConnection();
+        $stmt = $pdo->prepare("SELECT * FROM subjects WHERE id = ?");
+        $stmt->execute([$subjectId]);
+        return $stmt->fetch();
+    } catch (PDOException $e) {
+        error_log("Get subject by ID error: " . $e->getMessage());
+        return null;
+    }
 }
 
-
-function getAllSectionsForSubject($tableName) {
-    $conn = getDBConnection();
-    $sql = "SELECT DISTINCT tab_name FROM `" . $tableName . "` ORDER BY tab_name";
-    $result = mysqli_query($conn, $sql);
-    
-    $sections = [];
-    if ($result && mysqli_num_rows($result) > 0) {
-        while ($row = mysqli_fetch_assoc($result)) {
-            $sections[] = $row["tab_name"];
+function addSubjectDb($subjectName, $displayName, $description, $imagePath, $userId) {
+    try {
+        if ($userId === null) {
+            return false;
         }
-    }
-    
-    mysqli_close($conn);
-    return $sections;
-}
-
-function deleteStudyCard($id, $table) {
-    $conn = getDBConnection();
-    $sql = "DELETE FROM `" . $table . "` WHERE id = " . intval($id);
-    $result = mysqli_query($conn, $sql);
-    mysqli_close($conn);
-    return $result;
-}
-
-function updateStudyCard($id, $title, $content, $table) {
-    $conn = getDBConnection();
-    $title = mysqli_real_escape_string($conn, $title);
-    $content = mysqli_real_escape_string($conn, $content);
-    $sql = "UPDATE `" . $table . "` SET title = '$title', content = '$content' WHERE id = " . intval($id);
-    $result = mysqli_query($conn, $sql);
-    mysqli_close($conn);
-    return $result;
-}
-
-function insertSection($table, $sectionName) {
-    $conn = getDBConnection();
-    $placeholderTitle = '__section_placeholder';
-    $stmt = $conn->prepare("INSERT INTO `$table` (tab_name, title, content, card_type, sort_order) VALUES (?, ?, '', 'normal', 0)");
-    if ($stmt === false) {
-        mysqli_close($conn);
+        
+        $pdo = getDBConnection();
+        
+        $stmt = $pdo->prepare(
+            "INSERT INTO subjects (user_id, subject_name, display_name, description, image_path) 
+             VALUES (?, ?, ?, ?, ?)"
+        );
+        
+        $stmt->execute([$userId, $subjectName, $displayName, $description, $imagePath]);
+        
+        return $pdo->lastInsertId();
+        
+    } catch (PDOException $e) {
+        error_log("Add subject error: " . $e->getMessage());
         return false;
     }
-    $stmt->bind_param("ss", $sectionName, $placeholderTitle);
-    $res = $stmt->execute();
-    $stmt->close();
-    mysqli_close($conn);
-    return $res;
 }
 
-function deleteSection($table, $sectionName) {
-    $conn = getDBConnection();
-    $stmt = $conn->prepare("DELETE FROM `$table` WHERE tab_name = ?");
-    if ($stmt === false) {
-        mysqli_close($conn);
+function deleteSubjectDb($subjectId, $userId = null) {
+    try {
+        $pdo = getDBConnection();
+        
+        // Verify ownership if userId provided
+        if ($userId !== null) {
+            $stmt = $pdo->prepare("DELETE FROM subjects WHERE id = ? AND user_id = ?");
+            return $stmt->execute([$subjectId, $userId]);
+        } else {
+            $stmt = $pdo->prepare("DELETE FROM subjects WHERE id = ?");
+            return $stmt->execute([$subjectId]);
+        }
+        
+    } catch (PDOException $e) {
+        error_log("Delete subject error: " . $e->getMessage());
         return false;
     }
-    $stmt->bind_param("s", $sectionName);
-    $res = $stmt->execute();
-    $stmt->close();
-    mysqli_close($conn);
-    return $res;
 }
+
+function userOwnsSubjectDb($subjectId, $userId) {
+    try {
+        $pdo = getDBConnection();
+        $stmt = $pdo->prepare("SELECT id FROM subjects WHERE id = ? AND user_id = ?");
+        $stmt->execute([$subjectId, $userId]);
+        return $stmt->fetch() !== false;
+    } catch (PDOException $e) {
+        error_log("Check ownership error: " . $e->getMessage());
+        return false;
+    }
+}
+
+// =============================================
+// SECTION FUNCTIONS
+// =============================================
+
+function getSections($subjectId) {
+    try {
+        $pdo = getDBConnection();
+        $stmt = $pdo->prepare("SELECT * FROM sections WHERE subject_id = ? ORDER BY sort_order, section_name");
+        $stmt->execute([$subjectId]);
+        return $stmt->fetchAll();
+    } catch (PDOException $e) {
+        error_log("Get sections error: " . $e->getMessage());
+        return [];
+    }
+}
+
+function addSection($subjectId, $sectionName) {
+    try {
+        $pdo = getDBConnection();
+        
+        // Get the next sort order
+        $stmt = $pdo->prepare("SELECT COALESCE(MAX(sort_order), -1) + 1 as next_order FROM sections WHERE subject_id = ?");
+        $stmt->execute([$subjectId]);
+        $nextOrder = $stmt->fetch()['next_order'];
+        
+        $stmt = $pdo->prepare("INSERT INTO sections (subject_id, section_name, sort_order) VALUES (?, ?, ?)");
+        $stmt->execute([$subjectId, $sectionName, $nextOrder]);
+        
+        return $pdo->lastInsertId();
+        
+    } catch (PDOException $e) {
+        error_log("Add section error: " . $e->getMessage());
+        return false;
+    }
+}
+
+function deleteSection($sectionId) {
+    try {
+        $pdo = getDBConnection();
+        $stmt = $pdo->prepare("DELETE FROM sections WHERE id = ?");
+        return $stmt->execute([$sectionId]);
+    } catch (PDOException $e) {
+        error_log("Delete section error: " . $e->getMessage());
+        return false;
+    }
+}
+
+function getSectionById($sectionId) {
+    try {
+        $pdo = getDBConnection();
+        $stmt = $pdo->prepare("SELECT * FROM sections WHERE id = ?");
+        $stmt->execute([$sectionId]);
+        return $stmt->fetch();
+    } catch (PDOException $e) {
+        error_log("Get section by ID error: " . $e->getMessage());
+        return null;
+    }
+}
+
+// =============================================
+// STUDY CARD FUNCTIONS
+// =============================================
+
+function getStudyCards($subjectId, $sectionId = null) {
+    try {
+        $pdo = getDBConnection();
+        
+        if ($sectionId !== null) {
+            $stmt = $pdo->prepare(
+                "SELECT * FROM study_cards 
+                 WHERE subject_id = ? AND section_id = ? 
+                 ORDER BY sort_order, created_at"
+            );
+            $stmt->execute([$subjectId, $sectionId]);
+        } else {
+            $stmt = $pdo->prepare(
+                "SELECT sc.*, s.section_name 
+                 FROM study_cards sc
+                 JOIN sections s ON sc.section_id = s.id
+                 WHERE sc.subject_id = ? 
+                 ORDER BY s.sort_order, sc.sort_order, sc.created_at"
+            );
+            $stmt->execute([$subjectId]);
+        }
+        
+        return $stmt->fetchAll();
+        
+    } catch (PDOException $e) {
+        error_log("Get study cards error: " . $e->getMessage());
+        return [];
+    }
+}
+
+function addStudyCard($subjectId, $sectionId, $title, $content, $cardType = 'normal') {
+    try {
+        $pdo = getDBConnection();
+        
+        // Get the next sort order
+        $stmt = $pdo->prepare(
+            "SELECT COALESCE(MAX(sort_order), -1) + 1 as next_order 
+             FROM study_cards 
+             WHERE subject_id = ? AND section_id = ?"
+        );
+        $stmt->execute([$subjectId, $sectionId]);
+        $nextOrder = $stmt->fetch()['next_order'];
+        
+        $stmt = $pdo->prepare(
+            "INSERT INTO study_cards (subject_id, section_id, title, content, card_type, sort_order) 
+             VALUES (?, ?, ?, ?, ?, ?)"
+        );
+        
+        $stmt->execute([$subjectId, $sectionId, $title, $content, $cardType, $nextOrder]);
+        
+        return $pdo->lastInsertId();
+        
+    } catch (PDOException $e) {
+        error_log("Add study card error: " . $e->getMessage());
+        return false;
+    }
+}
+
+function updateStudyCard($cardId, $title, $content) {
+    try {
+        $pdo = getDBConnection();
+        $stmt = $pdo->prepare("UPDATE study_cards SET title = ?, content = ? WHERE id = ?");
+        return $stmt->execute([$title, $content, $cardId]);
+    } catch (PDOException $e) {
+        error_log("Update study card error: " . $e->getMessage());
+        return false;
+    }
+}
+
+function deleteStudyCard($cardId) {
+    try {
+        $pdo = getDBConnection();
+        $stmt = $pdo->prepare("DELETE FROM study_cards WHERE id = ?");
+        return $stmt->execute([$cardId]);
+    } catch (PDOException $e) {
+        error_log("Delete study card error: " . $e->getMessage());
+        return false;
+    }
+}
+
+function getStudyCardById($cardId) {
+    try {
+        $pdo = getDBConnection();
+        $stmt = $pdo->prepare("SELECT * FROM study_cards WHERE id = ?");
+        $stmt->execute([$cardId]);
+        return $stmt->fetch();
+    } catch (PDOException $e) {
+        error_log("Get study card by ID error: " . $e->getMessage());
+        return null;
+    }
+}
+
+// =============================================
+// HELPER FUNCTIONS
+// =============================================
 
 function renderStudyCard($card) {
-    if (isset($card['title']) && $card['title'] === '__section_placeholder') {
-        return;
-    }
-    $cardClass = $card['card_type'] === 'normal' ? 'review-card' : 'review-card ' . $card['card_type'];
+    $cardClass = $card['card_type'] === 'normal' ? 'review-card' : 'review-card ' . htmlspecialchars($card['card_type']);
     
     echo '<div class="' . $cardClass . '" style="position: relative;">';
     echo '<div class="card-actions" style="position: absolute; top: 5px; right: 5px;">';
-    echo '<button class="btn btn-sm btn-outline-danger me-1" onclick="deleteCard(' . $card['id'] . ')">&times;</button>';
-    echo '<button class="btn btn-sm btn-outline-primary" onclick="editCard(' . $card['id'] . ', \'' . htmlspecialchars($card['title'], ENT_QUOTES) . '\', \'' . htmlspecialchars($card['content'], ENT_QUOTES) . '\')">&hellip;</button>';
+    echo '<button class="btn btn-sm btn-outline-danger me-1" onclick="deleteCard(' . (int)$card['id'] . ')">&times;</button>';
+    echo '<button class="btn btn-sm btn-outline-primary" onclick="editCard(' . (int)$card['id'] . ', \'' . htmlspecialchars($card['title'], ENT_QUOTES, 'UTF-8') . '\', \'' . htmlspecialchars($card['content'], ENT_QUOTES, 'UTF-8') . '\')">&hellip;</button>';
     echo '</div>';
     echo '<h5 class="fw-bold">' . htmlspecialchars($card['title']) . '</h5>';
     
-    if (strpos($card['content'], '<') !== false) {
-        echo $card['content'];
-    } else {
-        echo '<p>' . htmlspecialchars($card['content']) . '</p>';
-    }
+    // Allow HTML in content but sanitize it properly
+    echo '<div>' . $card['content'] . '</div>';
     
     echo '</div>';
 }

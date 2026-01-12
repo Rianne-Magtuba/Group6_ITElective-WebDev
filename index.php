@@ -559,7 +559,7 @@ if (isset($_POST['add_subject'])) {
     $subjectName = trim($_POST['subject_name']);
     $displayName = trim($_POST['display_name']);
     $description = trim($_POST['description']);
-    $imagePath = trim($_POST['image_path']) ?: 'img/default-card.png';
+    $imagePath = trim($_POST['image_path']) ?: 'img/default-card.jpg';
     
     $subjectId = addSubject($subjectName, $displayName, $description, $imagePath, getCurrentUserId());
     if ($subjectId) {
