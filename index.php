@@ -94,21 +94,25 @@ if (isset($_GET['logout'])) {
           $subjects = []; // No subjects for logged out users
       }
       
-      foreach ($subjects as $subject) {
-          echo '<div class="col-md-6 col-lg-4 fade-in">';
-          echo '  <div class="card shadow-sm h-100 position-relative">';
-          echo '    <button onclick="deleteSubjectCard(' . $subject['id'] . ')" style="position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.8); border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; z-index: 10;">&times;</button>';
-          echo '    <img src="' . htmlspecialchars($subject['image_path']) . '" class="card-img-top" alt="' . htmlspecialchars($subject['display_name']) . '">';
-          echo '    <div class="card-body text-justify">';
-          echo '      <h5 class="card-title text-center cardTxt">' . htmlspecialchars($subject['display_name']) . '</h5>';
-          echo '      <p class="card-text text-center cardTxt">' . htmlspecialchars($subject['description']) . '</p>';
-          echo '      <div class="d-flex justify-content-center">';
-          echo '        <a href="subject_view.php?id=' . $subject['id'] . '" class="btn btn-primary">View</a>';
-          echo '      </div>';
-          echo '    </div>';
-          echo '  </div>';
-          echo '</div>';
-      }
+   foreach ($subjects as $subject) {
+    echo '<div class="col-md-6 col-lg-4 fade-in">';
+    echo '  <div class="card shadow-sm h-100 position-relative">';
+    echo '    <button onclick="deleteSubjectCard(' . $subject['id'] . ')" style="position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.8); border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; z-index: 10;">&times;</button>';
+    
+    // Image with error handling
+    $imageSrc = htmlspecialchars($subject['image_path']);
+    echo '    <img src="' . $imageSrc . '" class="card-img-top" alt="' . htmlspecialchars($subject['display_name']) . '" onerror="this.src=\'img/default-card.png\'" style="height: 200px; object-fit: cover;">';
+    
+    echo '    <div class="card-body text-justify">';
+    echo '      <h5 class="card-title text-center cardTxt">' . htmlspecialchars($subject['display_name']) . '</h5>';
+    echo '      <p class="card-text text-center cardTxt">' . htmlspecialchars($subject['description']) . '</p>';
+    echo '      <div class="d-flex justify-content-center">';
+    echo '        <a href="subject_view.php?id=' . $subject['id'] . '" class="btn btn-primary">View</a>';
+    echo '      </div>';
+    echo '    </div>';
+    echo '  </div>';
+    echo '</div>';
+}
       ?>
 
       <!-- Add Subject Card -->
@@ -410,17 +414,55 @@ if (isset($_GET['logout'])) {
     <script src="js/script.js"></script>
     
     <script>
-  function showAddSubjectModal() {
+
+ function showAddSubjectModal() {
   <?php if (!isLoggedIn()): ?>
     alert('Please login first to add subjects.');
     return;
   <?php endif; ?>
   document.getElementById('addSubjectModal').style.display = 'block';
+  // Reset form
+  document.getElementById('addSubjectForm').reset();
+  document.getElementById('imagePreview').style.display = 'none';
 }
-   function closeAddSubjectModal() {
+
+function closeAddSubjectModal() {
   document.getElementById('addSubjectModal').style.display = 'none';
+  document.getElementById('addSubjectForm').reset();
+  document.getElementById('imagePreview').style.display = 'none';
 }
+ function previewImage(event) {
+  const file = event.target.files[0];
+  if (file) {
+    // Check file size (5MB = 5 * 1024 * 1024 bytes)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File size must be less than 5MB');
+      event.target.value = '';
+      document.getElementById('imagePreview').style.display = 'none';
+      return;
+    }
     
+    // Check file type
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+    if (!validTypes.includes(file.type)) {
+      alert('Please select a valid image file (JPG, PNG, or GIF)');
+      event.target.value = '';
+      document.getElementById('imagePreview').style.display = 'none';
+      return;
+    }
+    
+    // Show preview
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      document.getElementById('previewImg').src = e.target.result;
+      document.getElementById('imagePreview').style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+  } else {
+    document.getElementById('imagePreview').style.display = 'none';
+  }
+}
+
    function submitSubject() {
   const displayName = document.getElementById('displayName').value.trim();
   const description = document.getElementById('description').value.trim();
@@ -465,21 +507,31 @@ if (isset($_GET['logout'])) {
       <button onclick="closeAddSubjectModal()" style="background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
     </div>
     
-    <div>
+    <form id="addSubjectForm" method="POST" enctype="multipart/form-data">
+      <input type="hidden" name="add_subject" value="1">
+      
       <label style="display: block; margin-bottom: 5px; font-weight: bold;">Subject Name:</label>
-      <input type="text" id="displayName" placeholder="e.g., Systems Integration and Architecture" style="width: 100%; padding: 8px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px;">
+      <input type="text" name="display_name" id="displayName" placeholder="e.g., Systems Integration and Architecture" required style="width: 100%; padding: 8px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px;">
       
       <label style="display: block; margin-bottom: 5px; font-weight: bold;">Description:</label>
-      <textarea id="description" placeholder="Brief description of the subject" style="width: 100%; padding: 8px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; height: 80px; resize: vertical;"></textarea>
+      <textarea name="description" id="description" placeholder="Brief description of the subject" required style="width: 100%; padding: 8px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; height: 80px; resize: vertical;"></textarea>
       
-      <label style="display: block; margin-bottom: 5px; font-weight: bold;">Image Path (optional):</label>
-      <input type="text" id="imagePath" placeholder="img/subject-card.png" style="width: 100%; padding: 8px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 4px;">
+      <label style="display: block; margin-bottom: 5px; font-weight: bold;">Subject Image:</label>
+      <div style="margin-bottom: 15px;">
+        <input type="file" name="subject_image" id="subjectImage" accept="image/*" onchange="previewImage(event)" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+        <small style="color: #666; display: block; margin-top: 5px;">Accepted formats: JPG, PNG, GIF (Max 5MB)</small>
+      </div>
+      
+      <!-- Image Preview -->
+      <div id="imagePreview" style="display: none; margin-bottom: 15px; text-align: center;">
+        <img id="previewImg" src="" alt="Preview" style="max-width: 100%; max-height: 200px; border-radius: 4px; border: 1px solid #ddd;">
+      </div>
       
       <div style="text-align: right;">
-        <button onclick="closeAddSubjectModal()" style="background-color: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 4px; margin-right: 10px; cursor: pointer;">Cancel</button>
-        <button onclick="submitSubject()" style="background-color: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">Create Subject</button>
+        <button type="button" onclick="closeAddSubjectModal()" style="background-color: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 4px; margin-right: 10px; cursor: pointer;">Cancel</button>
+        <button type="submit" style="background-color: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">Create Subject</button>
       </div>
-    </div>
+    </form>
   </div>
 </div>
 
@@ -535,6 +587,7 @@ if(isset($_POST['login'])){
 }
 
 // DELETE SUBJECT HANDLER
+// DELETE SUBJECT HANDLER
 if (isset($_POST['delete_subject'])) {
     if (!isLoggedIn()) {
         echo "<script>alert('Please login first.'); window.location.href = 'index.php';</script>";
@@ -542,7 +595,18 @@ if (isset($_POST['delete_subject'])) {
     }
     
     $subjectId = intval($_POST['delete_subject']);
-    if (deleteSubject($subjectId, getCurrentUserId())) {
+    
+    // Get subject to delete image file
+    $subject = getSubjectById($subjectId);
+    
+    if ($subject && deleteSubject($subjectId, getCurrentUserId())) {
+        // Delete image file if it's not the default
+        if ($subject['image_path'] && 
+            $subject['image_path'] !== 'img/default-card.png' && 
+            file_exists($subject['image_path'])) {
+            unlink($subject['image_path']);
+        }
+        
         echo "<script>alert('Subject deleted successfully!'); window.location.href = 'index.php';</script>";
     } else {
         echo "<script>alert('Failed to delete subject. You may not own this subject.'); window.location.href = 'index.php';</script>";
@@ -550,16 +614,59 @@ if (isset($_POST['delete_subject'])) {
 }
 
 // ADD SUBJECT HANDLER
+// ADD SUBJECT HANDLER
 if (isset($_POST['add_subject'])) {
     if (!isLoggedIn()) {
         echo "<script>alert('Please login first.'); window.location.href = 'index.php';</script>";
         exit();
     }
     
-    $subjectName = trim($_POST['subject_name']);
     $displayName = trim($_POST['display_name']);
     $description = trim($_POST['description']);
-    $imagePath = trim($_POST['image_path']) ?: 'img/default-card.jpg';
+    $subjectName = preg_replace('/[^a-zA-Z0-9\s]/', '', $displayName);
+    $subjectName = preg_replace('/\s+/', '', $subjectName);
+    
+    // Default image path
+    $imagePath = 'img/default-card.png';
+    
+    // Handle file upload
+    if (isset($_FILES['subject_image']) && $_FILES['subject_image']['error'] === UPLOAD_ERR_OK) {
+        $uploadDir = 'uploads/subjects/';
+        
+        // Create directory if it doesn't exist
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+        
+        $fileTmpPath = $_FILES['subject_image']['tmp_name'];
+        $fileName = $_FILES['subject_image']['name'];
+        $fileSize = $_FILES['subject_image']['size'];
+        $fileType = $_FILES['subject_image']['type'];
+        $fileExtension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+        
+        // Allowed extensions
+        $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif'];
+        
+        if (in_array($fileExtension, $allowedExtensions)) {
+            // Check file size (5MB max)
+            if ($fileSize <= 5 * 1024 * 1024) {
+                // Generate unique filename
+                $newFileName = 'subject_' . getCurrentUserId() . '_' . time() . '.' . $fileExtension;
+                $destPath = $uploadDir . $newFileName;
+                
+                // Move file to uploads directory
+                if (move_uploaded_file($fileTmpPath, $destPath)) {
+                    $imagePath = $destPath;
+                } else {
+                    echo "<script>alert('Error uploading image. Using default image.'); window.location.href = 'index.php';</script>";
+                }
+            } else {
+                echo "<script>alert('File size exceeds 5MB. Using default image.'); window.location.href = 'index.php';</script>";
+            }
+        } else {
+            echo "<script>alert('Invalid file type. Using default image.'); window.location.href = 'index.php';</script>";
+        }
+    }
     
     $subjectId = addSubject($subjectName, $displayName, $description, $imagePath, getCurrentUserId());
     if ($subjectId) {
