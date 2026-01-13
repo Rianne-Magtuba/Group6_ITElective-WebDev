@@ -1,6 +1,6 @@
 IN ORDER TO RUN THIS
 PLEASE RUN THE FOLLOWING MYSQL SCRIPT!
-
+DROP DATABASE IF EXISTS cramtayo_db;
 CREATE DATABASE cramtayo_db;
  DROP TABLE IF EXISTS study_cards;
  DROP TABLE IF EXISTS subjects;
@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS study_cards (
     section_id INT NOT NULL,
     title VARCHAR(255) NOT NULL,
     content TEXT NOT NULL,
+    image_path VARCHAR(255) DEFAULT NULL,
     card_type ENUM('normal', 'long-card', 'long-card-4') DEFAULT 'normal',
     sort_order INT DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

@@ -285,7 +285,7 @@ function getStudyCards($subjectId, $sectionId = null) {
     }
 }
 
-function addStudyCard($subjectId, $sectionId, $title, $content, $cardType = 'normal') {
+function addStudyCardWithImage($subjectId, $sectionId, $title, $content, $cardType = 'normal', $imagePath = null) {
     try {
         $pdo = getDBConnection();
         
@@ -299,20 +299,19 @@ function addStudyCard($subjectId, $sectionId, $title, $content, $cardType = 'nor
         $nextOrder = $stmt->fetch()['next_order'];
         
         $stmt = $pdo->prepare(
-            "INSERT INTO study_cards (subject_id, section_id, title, content, card_type, sort_order) 
-             VALUES (?, ?, ?, ?, ?, ?)"
+            "INSERT INTO study_cards (subject_id, section_id, title, content, image_path, card_type, sort_order) 
+             VALUES (?, ?, ?, ?, ?, ?, ?)"
         );
         
-        $stmt->execute([$subjectId, $sectionId, $title, $content, $cardType, $nextOrder]);
+        $stmt->execute([$subjectId, $sectionId, $title, $content, $imagePath, $cardType, $nextOrder]);
         
         return $pdo->lastInsertId();
         
     } catch (PDOException $e) {
-        error_log("Add study card error: " . $e->getMessage());
+        error_log("Add study card with image error: " . $e->getMessage());
         return false;
     }
 }
-
 function updateStudyCard($cardId, $title, $content) {
     try {
         $pdo = getDBConnection();
@@ -355,14 +354,22 @@ function renderStudyCard($card) {
     $cardClass = $card['card_type'] === 'normal' ? 'review-card' : 'review-card ' . htmlspecialchars($card['card_type']);
     
     echo '<div class="' . $cardClass . '" style="position: relative;">';
-    echo '<div class="card-actions" style="position: absolute; top: 5px; right: 5px;">';
+    echo '<div class="card-actions" style="position: absolute; top: 5px; right: 5px; z-index: 10;">';
     echo '<button class="btn btn-sm btn-outline-danger me-1" onclick="deleteCard(' . (int)$card['id'] . ')">&times;</button>';
     echo '<button class="btn btn-sm btn-outline-primary" onclick="editCard(' . (int)$card['id'] . ', \'' . htmlspecialchars($card['title'], ENT_QUOTES, 'UTF-8') . '\', \'' . htmlspecialchars($card['content'], ENT_QUOTES, 'UTF-8') . '\')">&hellip;</button>';
     echo '</div>';
+    
     echo '<h5 class="fw-bold">' . htmlspecialchars($card['title']) . '</h5>';
     
-    // Allow HTML in content but sanitize it properly
-    echo '<div>' . $card['content'] . '</div>';
+    // Display image if exists
+    if (!empty($card['image_path']) && file_exists($card['image_path'])) {
+        echo '<div class="card-image mb-3" style="text-align: center;">';
+        echo '<img src="' . htmlspecialchars($card['image_path']) . '" alt="Card image" style="max-width: 100%; max-height: 300px; border-radius: 8px; object-fit: contain;">';
+        echo '</div>';
+    }
+    
+    // Display content
+    echo '<div>' . nl2br(htmlspecialchars($card['content'])) . '</div>';
     
     echo '</div>';
 }

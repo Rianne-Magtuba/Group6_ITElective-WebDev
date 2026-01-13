@@ -95,25 +95,26 @@ function getStudyCardsForSubjects($subjectId, $sectionName) {
 /**
  * Add a card to a section (by section name - backward compatibility)
  */
-function addCard($subjectId, $sectionName, $title, $content, $cardType = 'normal') {
+/**
+ * Add a card with image support
+ */
+function addCardWithImage($subjectId, $sectionName, $title, $content, $cardType = 'normal', $imagePath = null) {
     try {
-        // First, get or create the section
         $pdo = getDBConnection();
         $stmt = $pdo->prepare("SELECT id FROM sections WHERE subject_id = ? AND section_name = ?");
         $stmt->execute([$subjectId, $sectionName]);
         $section = $stmt->fetch();
         
         if (!$section) {
-            // Create section if it doesn't exist
             $sectionId = addSection($subjectId, $sectionName);
         } else {
             $sectionId = $section['id'];
         }
         
-        return addStudyCard($subjectId, $sectionId, $title, $content, $cardType);
+        return addStudyCardWithImage($subjectId, $sectionId, $title, $content, $cardType, $imagePath);
         
     } catch (PDOException $e) {
-        error_log("Add card error: " . $e->getMessage());
+        error_log("Add card with image error: " . $e->getMessage());
         return false;
     }
 }

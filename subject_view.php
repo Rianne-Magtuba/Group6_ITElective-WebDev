@@ -67,9 +67,37 @@ if (isset($_POST["add_card"])) {
     $title = trim($_POST["title"]);
     $content = trim($_POST["content"]);
     $cardType = $_POST["card_type"] ?: "normal";
+    $imagePath = null;
+    
+    // Handle image upload
+    if (isset($_FILES['card_image']) && $_FILES['card_image']['error'] === UPLOAD_ERR_OK) {
+        $uploadDir = 'uploads/cards/';
+        
+        // Create directory if it doesn't exist
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+        
+        $fileTmpPath = $_FILES['card_image']['tmp_name'];
+        $fileName = $_FILES['card_image']['name'];
+        $fileSize = $_FILES['card_image']['size'];
+        $fileExtension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+        
+        $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif'];
+        
+        if (in_array($fileExtension, $allowedExtensions) && $fileSize <= 5 * 1024 * 1024) {
+            // Generate unique filename
+            $newFileName = 'card_' . getCurrentUserId() . '_' . time() . '_' . rand(1000, 9999) . '.' . $fileExtension;
+            $destPath = $uploadDir . $newFileName;
+            
+            if (move_uploaded_file($fileTmpPath, $destPath)) {
+                $imagePath = $destPath;
+            }
+        }
+    }
     
     if (!empty($title) && !empty($content)) {
-        $newCardId = addStudyCard($subjectId, $sectionId, $title, $content, $cardType);
+        $newCardId = addStudyCardWithImage($subjectId, $sectionId, $title, $content, $cardType, $imagePath);
         if ($newCardId) {
             header("Location: subject_view.php?id=" . $subjectId);
             exit;
@@ -82,7 +110,16 @@ if (isset($_POST["add_card"])) {
 // Handle delete card request
 if (isset($_POST["delete_id"])) {
     $cardId = intval($_POST["delete_id"]);
-    if (deleteStudyCard($cardId)) {
+    
+    // Get card to delete image file
+    $card = getStudyCardById($cardId);
+    
+    if ($card && deleteStudyCard($cardId)) {
+        // Delete image file if it exists
+        if ($card['image_path'] && file_exists($card['image_path'])) {
+            unlink($card['image_path']);
+        }
+        
         header("Location: subject_view.php?id=" . $subjectId);
         exit;
     } else {
@@ -117,6 +154,32 @@ $sections = getSections($subjectId);
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans&display=swap" rel="stylesheet">
   <link href="css/styles.css" rel="stylesheet" />
+  <style>
+    .review-card {
+      position: relative;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .review-card:hover:not(.add-card-btn) {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    #viewCardModal .modal-dialog {
+      max-width: 800px;
+    }
+    #viewCardModal .card-content {
+      font-size: 1.1rem;
+      line-height: 1.8;
+      white-space: pre-wrap;
+    }
+    #viewCardModal .card-image-large {
+      max-width: 100%;
+      max-height: 500px;
+      object-fit: contain;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+  </style>
 </head>
 <body>
 
@@ -200,7 +263,7 @@ $sections = getSections($subjectId);
             <?php
             $cards = getStudyCards($subjectId, $section['id']);
             foreach ($cards as $card) {
-                renderStudyCard($card);
+                renderStudyCardWithView($card);
             }
             ?>
             <div class="review-card add-card-btn" 
@@ -218,6 +281,27 @@ $sections = getSections($subjectId);
   <?php endif; ?>
 </div>
 
+<!-- View Card Modal -->
+<div class="modal fade" id="viewCardModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 class="modal-title fw-bold" id="viewCardTitle"></h4>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="viewCardImageContainer" class="text-center mb-4" style="display: none;">
+          <img id="viewCardImage" src="" alt="Card image" class="card-image-large">
+        </div>
+        <div id="viewCardContent" class="card-content"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Add Card Modal -->
 <div class="modal fade" id="addCardModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -226,7 +310,7 @@ $sections = getSections($subjectId);
         <h5 class="modal-title">Add Card</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <form method="POST">
+      <form method="POST" enctype="multipart/form-data" id="addCardForm">
         <div class="modal-body">
           <input type="hidden" id="modal_section_id" name="section_id" value="">
           
@@ -241,11 +325,22 @@ $sections = getSections($subjectId);
           </div>
           
           <div class="mb-3">
+            <label class="form-label">Card Image (Optional)</label>
+            <input type="file" name="card_image" id="cardImage" accept="image/*" onchange="previewCardImage(event)" class="form-control">
+            <small class="text-muted">Accepted formats: JPG, PNG, GIF (Max 5MB)</small>
+          </div>
+          
+          <!-- Image Preview -->
+          <div id="cardImagePreview" style="display: none;" class="mb-3 text-center">
+            <img id="cardPreviewImg" src="" alt="Preview" style="max-width: 100%; max-height: 200px; border-radius: 4px; border: 1px solid #ddd;">
+            <button type="button" class="btn btn-sm btn-danger mt-2" onclick="clearCardImage()">Remove Image</button>
+          </div>
+          
+          <div class="mb-3">
             <label class="form-label">Card Type</label>
             <select name="card_type" class="form-select">
               <option value="normal">Normal</option>
               <option value="long-card">Long Card</option>
-              <option value="long-card-4">Long Card 4</option>
             </select>
           </div>
         </div>
@@ -261,7 +356,32 @@ $sections = getSections($subjectId);
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="js/script.js"></script>
 <script>
-function deleteCard(id) {
+function viewCard(title, content, imagePath) {
+  // Set title
+  document.getElementById('viewCardTitle').textContent = title;
+  
+  // Set content
+  document.getElementById('viewCardContent').textContent = content;
+  
+  // Handle image
+  const imageContainer = document.getElementById('viewCardImageContainer');
+  const imageElement = document.getElementById('viewCardImage');
+  
+  if (imagePath && imagePath !== '') {
+    imageElement.src = imagePath;
+    imageContainer.style.display = 'block';
+  } else {
+    imageContainer.style.display = 'none';
+  }
+  
+  // Show modal
+  const modalEl = document.getElementById('viewCardModal');
+  const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+  bsModal.show();
+}
+
+function deleteCard(id, event) {
+  event.stopPropagation(); // Prevent card click
   if (confirm("Are you sure you want to delete this card?")) {
     const form = document.createElement("form");
     form.method = "POST";
@@ -271,7 +391,8 @@ function deleteCard(id) {
   }
 }
 
-function editCard(id, title, content) {
+function editCard(id, title, content, event) {
+  event.stopPropagation(); // Prevent card click
   const newTitle = prompt("Edit title:", title);
   if (newTitle !== null && newTitle.trim() !== "") {
     const newContent = prompt("Edit content:", content.replace(/<[^>]*>/g, ""));
@@ -291,10 +412,52 @@ function showAddCardModal(sectionId) {
   // Set the section ID in the hidden input
   document.getElementById('modal_section_id').value = sectionId;
   
+  // Reset form and preview
+  document.getElementById('addCardForm').reset();
+  document.getElementById('modal_section_id').value = sectionId; // Set again after reset
+  document.getElementById('cardImagePreview').style.display = 'none';
+  
   // Show the modal
   const modalEl = document.getElementById("addCardModal");
   const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
   bsModal.show();
+}
+
+function previewCardImage(event) {
+  const file = event.target.files[0];
+  if (file) {
+    // Check file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File size must be less than 5MB');
+      event.target.value = '';
+      document.getElementById('cardImagePreview').style.display = 'none';
+      return;
+    }
+    
+    // Check file type
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+    if (!validTypes.includes(file.type)) {
+      alert('Please select a valid image file (JPG, PNG, or GIF)');
+      event.target.value = '';
+      document.getElementById('cardImagePreview').style.display = 'none';
+      return;
+    }
+    
+    // Show preview
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      document.getElementById('cardPreviewImg').src = e.target.result;
+      document.getElementById('cardImagePreview').style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+  } else {
+    document.getElementById('cardImagePreview').style.display = 'none';
+  }
+}
+
+function clearCardImage() {
+  document.getElementById('cardImage').value = '';
+  document.getElementById('cardImagePreview').style.display = 'none';
 }
 
 function showAddSectionModal() {
@@ -322,7 +485,6 @@ function showAddSectionModal() {
 }
 
 function removeSectionPrompt() {
-  // Get the currently active tab
   const activeTab = document.querySelector('.nav-link.active');
   if (!activeTab) {
     alert('No section is currently selected.');
@@ -363,3 +525,37 @@ function removeSectionPrompt() {
 
 </body>
 </html>
+
+<?php
+// Updated renderStudyCard function with clickable card
+function renderStudyCardWithView($card) {
+    $cardClass = $card['card_type'] === 'normal' ? 'review-card' : 'review-card ' . htmlspecialchars($card['card_type']);
+    
+    // Prepare data for onclick
+    $cardTitle = htmlspecialchars($card['title'], ENT_QUOTES, 'UTF-8');
+    $cardContent = htmlspecialchars($card['content'], ENT_QUOTES, 'UTF-8');
+    $cardImage = htmlspecialchars($card['image_path'] ?? '', ENT_QUOTES, 'UTF-8');
+    
+    echo '<div class="' . $cardClass . '" style="position: relative;" onclick="viewCard(\'' . $cardTitle . '\', \'' . $cardContent . '\', \'' . $cardImage . '\')">';
+    
+    // Edit and delete buttons (right side)
+    echo '<div class="card-actions" style="position: absolute; top: 5px; right: 5px; z-index: 10;">';
+    echo '<button class="btn btn-sm btn-outline-danger me-1" onclick="deleteCard(' . (int)$card['id'] . ', event)">&times;</button>';
+    echo '<button class="btn btn-sm btn-outline-primary" onclick="editCard(' . (int)$card['id'] . ', \'' . $cardTitle . '\', \'' . $cardContent . '\', event)">&hellip;</button>';
+    echo '</div>';
+    
+    echo '<h5 class="fw-bold">' . htmlspecialchars($card['title']) . '</h5>';
+    
+    // Display image if exists
+    if (!empty($card['image_path']) && file_exists($card['image_path'])) {
+        echo '<div class="card-image mb-3" style="text-align: center;">';
+        echo '<img src="' . htmlspecialchars($card['image_path']) . '" alt="Card image" style="max-width: 100%; max-height: 300px; border-radius: 8px; object-fit: contain;">';
+        echo '</div>';
+    }
+    
+    // Display content
+    echo '<div>' . nl2br(htmlspecialchars($card['content'])) . '</div>';
+    
+    echo '</div>';
+}
+?>
