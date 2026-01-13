@@ -8,6 +8,144 @@ if (isset($_GET['logout'])) {
     header("Location: index.php");
     exit();
 }
+
+// =============================================
+// PHP HANDLERS
+// =============================================
+
+// REGISTER HANDLER
+if (isset($_POST['register'])) {
+    $username = trim($_POST['username']);
+    $email = trim($_POST['email']);
+    $rawPassword = $_POST['password'];
+    
+    if(empty($username)){
+       echo "<script>alert('Username is required'); window.location.href = 'index.php';</script>";
+       exit();
+    } else if(empty($email)){
+       echo "<script>alert('Email is required'); window.location.href = 'index.php';</script>";
+       exit();
+    } else if(empty($rawPassword)){
+       echo "<script>alert('Password is required'); window.location.href = 'index.php';</script>";
+       exit();
+    }
+    
+    $password = password_hash($rawPassword, PASSWORD_DEFAULT);
+    
+    if(registerAccount($username, $email, $password)){
+       echo "<script>alert('Registration successful! Please login.'); window.location.href = 'index.php';</script>";
+    } else {
+       echo "<script>alert('Registration failed. Email may already be in use.'); window.location.href = 'index.php';</script>";
+    }
+}
+
+// LOGIN HANDLER
+if(isset($_POST['login'])){
+    $email = trim($_POST['loginEmail']);
+    $password = $_POST['loginPass'];
+    
+    if(empty($email)){
+       echo "<script>alert('Email is required'); window.location.href = 'index.php';</script>";
+       exit();
+    } else if(empty($password)){
+       echo "<script>alert('Password is required'); window.location.href = 'index.php';</script>";
+       exit();
+    }
+    
+    if(loginAccount($email, $password)){
+        echo "<script>alert('Login successful!'); window.location.href = 'index.php';</script>";
+    } else {
+        echo "<script>alert('Invalid email or password.'); window.location.href = 'index.php';</script>";
+    }
+}
+
+// DELETE SUBJECT HANDLER
+if (isset($_POST['delete_subject'])) {
+    if (!isLoggedIn()) {
+        echo "<script>alert('Please login first.'); window.location.href = 'index.php';</script>";
+        exit();
+    }
+    
+    $subjectId = intval($_POST['delete_subject']);
+    
+    // Get subject to delete image file
+    $subject = getSubjectById($subjectId);
+    
+    if ($subject && deleteSubject($subjectId, getCurrentUserId())) {
+        // Delete image file if it's not the default
+        if ($subject['image_path'] && 
+            $subject['image_path'] !== 'C:/xampp/htdocs/repos/webdev/img/default-card.jpg' && 
+            file_exists($subject['image_path'])) {
+            unlink($subject['image_path']);
+        }
+        
+        echo "<script>alert('Subject deleted successfully!'); window.location.href = 'index.php';</script>";
+    } else {
+        echo "<script>alert('Failed to delete subject. You may not own this subject.'); window.location.href = 'index.php';</script>";
+    }
+}
+
+// ADD SUBJECT HANDLER
+if (isset($_POST['add_subject'])) {
+    if (!isLoggedIn()) {
+        echo "<script>alert('Please login first.'); window.location.href = 'index.php';</script>";
+        exit();
+    }
+    
+    $displayName = trim($_POST['display_name']);
+    $description = trim($_POST['description']);
+    $subjectName = preg_replace('/[^a-zA-Z0-9\s]/', '', $displayName);
+    $subjectName = preg_replace('/\s+/', '', $subjectName);
+            $uploadDir = 'uploads/subjects/';
+    // Default image path
+   $imagePath = 'img/default-card.jpg';
+    
+    // Handle file upload
+    if (isset($_FILES['subject_image']) && $_FILES['subject_image']['error'] === UPLOAD_ERR_OK) {
+
+        
+        // Create directory if it doesn't exist
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+        
+        $fileTmpPath = $_FILES['subject_image']['tmp_name'];
+        $fileName = $_FILES['subject_image']['name'];
+        $fileSize = $_FILES['subject_image']['size'];
+        $fileType = $_FILES['subject_image']['type'];
+        $fileExtension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+        
+        // Allowed extensions
+        $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif'];
+        
+        if (in_array($fileExtension, $allowedExtensions)) {
+            // Check file size (5MB max)
+            if ($fileSize <= 5 * 1024 * 1024) {
+                // Generate unique filename
+                $newFileName = 'subject_' . getCurrentUserId() . '_' . time() . '.' . $fileExtension;
+                $destPath = $uploadDir . $newFileName;
+                
+                // Move file to uploads directory
+                if (move_uploaded_file($fileTmpPath, $destPath)) {
+                    $imagePath = $destPath;
+                } else {
+                    echo "<script>alert('Error uploading image. Using default image.');</script>";
+                }
+            } else {
+                echo "<script>alert('File size exceeds 5MB. Using default image.');</script>";
+            }
+        } else {
+            echo "<script>alert('Invalid file type. Using default image.');</script>";
+        }
+    }
+    
+    $subjectId = addSubject($subjectName, $displayName, $description, $imagePath, getCurrentUserId());
+    if ($subjectId) {
+        echo "<script>alert('Subject created successfully!'); window.location.href = 'index.php';</script>";
+    } else {
+        echo "<script>alert('Failed to create subject.'); window.location.href = 'index.php';</script>";
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -21,6 +159,55 @@ if (isset($_GET['logout'])) {
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans&display=swap" rel="stylesheet">
     <link href="css/styles.css" rel="stylesheet" />
+    <style>
+      #searchSuggestions {
+    
+        position: absolute;
+        background: white;
+        border: 1px solid #000000;
+        border-radius: 8px;
+        max-height: 300px;
+        overflow-y: auto;
+        width: 100%;
+        z-index: 1000;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        display: none;
+        margin-top: 5px;
+      }
+      .suggestion-item {
+  padding: 12px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid #010000;
+  transition: background-color 0.2s;
+}
+.suggestion-item strong {
+  color: #000000;
+}
+      .suggestion-item:hover {
+        background-color: #f8f9fa;
+      }
+      .suggestion-item:last-child {
+        border-bottom: none;
+      }
+      .no-results {
+        padding: 12px 16px;
+        color: #6c757d;
+        text-align: center;
+      }
+      .search-wrapper {
+        position: relative;
+        width: 100%;
+        max-width: 500px;
+      }
+      .subject-highlight {
+        animation: highlightPulse 0.6s ease;
+      }
+      @keyframes highlightPulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); box-shadow: 0 0 20px rgba(0, 123, 255, 0.5); }
+        100% { transform: scale(1); }
+      }
+    </style>
   </head>
  
 <body>
@@ -66,8 +253,11 @@ if (isset($_GET['logout'])) {
     <p class="lead mb-5">where you review, last minute.</p>
 
     <!-- search bar -->
-    <form class="d-flex justify-content-center" role="search">
-      <input class="form-control rounded-pill me-2" type="search" placeholder="Search" aria-label="Search">
+    <form class="d-flex justify-content-center" role="search" onsubmit="return handleSearch(event)">
+      <div class="search-wrapper">
+        <input id="searchInput" class="form-control rounded-pill me-2" type="search" placeholder="Search subjects..." aria-label="Search" autocomplete="off" oninput="searchSubjects(this.value)">
+        <div id="searchSuggestions"></div>
+      </div>
       <button class="btn btn-outline-light rounded-pill" type="submit">
         <i class="fa-solid fa-magnifying-glass"></i>
       </button>
@@ -95,13 +285,13 @@ if (isset($_GET['logout'])) {
       }
       
    foreach ($subjects as $subject) {
-    echo '<div class="col-md-6 col-lg-4 fade-in">';
+    echo '<div class="col-md-6 col-lg-4 fade-in" id="subject-' . $subject['id'] . '" data-subject-name="' . htmlspecialchars(strtolower($subject['display_name'])) . '">';
     echo '  <div class="card shadow-sm h-100 position-relative">';
     echo '    <button onclick="deleteSubjectCard(' . $subject['id'] . ')" style="position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.8); border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; z-index: 10;">&times;</button>';
     
     // Image with error handling
     $imageSrc = htmlspecialchars($subject['image_path']);
-    echo '    <img src="' . $imageSrc . '" class="card-img-top" alt="' . htmlspecialchars($subject['display_name']) . '" onerror="this.src=\'img/default-card.png\'" style="height: 200px; object-fit: cover;">';
+    echo '    <img src="' . $imageSrc . '" class="card-img-top" alt="' . htmlspecialchars($subject['display_name']) . '" onerror="this.src=\'C:/xampp/htdocs/repos/webdev/img/default-card.jpg\'" style="height: 200px; object-fit: cover;">';
     
     echo '    <div class="card-body text-justify">';
     echo '      <h5 class="card-title text-center cardTxt">' . htmlspecialchars($subject['display_name']) . '</h5>';
@@ -401,7 +591,7 @@ if (isset($_GET['logout'])) {
         <hr>
 
         <p class="text-muted small text-center ">
-          By signing up, you agree to CramTayo’s
+          By signing up, you agree to CramTayo's
           <a href="#" class="importantTxtColors">Terms of Use</a> and <a href="#" class="importantTxtColors">Privacy Policy</a>.
         </p>
 
@@ -409,95 +599,6 @@ if (isset($_GET['logout'])) {
     </div>
   </div>
 </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="js/script.js"></script>
-    
-    <script>
-
- function showAddSubjectModal() {
-  <?php if (!isLoggedIn()): ?>
-    alert('Please login first to add subjects.');
-    return;
-  <?php endif; ?>
-  document.getElementById('addSubjectModal').style.display = 'block';
-  // Reset form
-  document.getElementById('addSubjectForm').reset();
-  document.getElementById('imagePreview').style.display = 'none';
-}
-
-function closeAddSubjectModal() {
-  document.getElementById('addSubjectModal').style.display = 'none';
-  document.getElementById('addSubjectForm').reset();
-  document.getElementById('imagePreview').style.display = 'none';
-}
- function previewImage(event) {
-  const file = event.target.files[0];
-  if (file) {
-    // Check file size (5MB = 5 * 1024 * 1024 bytes)
-    if (file.size > 5 * 1024 * 1024) {
-      alert('File size must be less than 5MB');
-      event.target.value = '';
-      document.getElementById('imagePreview').style.display = 'none';
-      return;
-    }
-    
-    // Check file type
-    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
-    if (!validTypes.includes(file.type)) {
-      alert('Please select a valid image file (JPG, PNG, or GIF)');
-      event.target.value = '';
-      document.getElementById('imagePreview').style.display = 'none';
-      return;
-    }
-    
-    // Show preview
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      document.getElementById('previewImg').src = e.target.result;
-      document.getElementById('imagePreview').style.display = 'block';
-    };
-    reader.readAsDataURL(file);
-  } else {
-    document.getElementById('imagePreview').style.display = 'none';
-  }
-}
-
-   function submitSubject() {
-  const displayName = document.getElementById('displayName').value.trim();
-  const description = document.getElementById('description').value.trim();
-  const imagePath = document.getElementById('imagePath').value.trim() || 'img/default-card.png';
-  
-  const subjectName = displayName.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '');
-  
-  if (displayName && description) {
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.innerHTML = '<input type="hidden" name="add_subject" value="1">' +
-                    '<input type="hidden" name="subject_name" value="' + encodeURIComponent(subjectName) + '">' +
-                    '<input type="hidden" name="display_name" value="' + encodeURIComponent(displayName) + '">' +
-                    '<input type="hidden" name="description" value="' + encodeURIComponent(description) + '">' +
-                    '<input type="hidden" name="image_path" value="' + encodeURIComponent(imagePath) + '">';
-    document.body.appendChild(form);
-    form.submit();
-  } else {
-    alert('Please fill in all required fields.');
-  }
-}
-
-    
-   function deleteSubjectCard(subjectId) {
-  if (confirm('Are you sure you want to delete this subject? This will remove all associated data.')) {
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.innerHTML = '<input type="hidden" name="delete_subject" value="' + subjectId + '">';
-    document.body.appendChild(form);
-    form.submit();
-  }
-}
-    </script>
-  </body>
-</html>
 
 <!-- ADD SUBJECT MODAL -->
 <div id="addSubjectModal" style="display: none; position: fixed; z-index: 1050; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);">
@@ -535,144 +636,147 @@ function closeAddSubjectModal() {
   </div>
 </div>
 
-<?php
-// =============================================
-// PHP HANDLERS
-// =============================================
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/script.js"></script>
+    
+    <script>
+// Store subjects data for search
+const subjectsData = <?php echo json_encode(isLoggedIn() ? getSubjects(getCurrentUserId()) : []); ?>;
 
-// REGISTER HANDLER
-if (isset($_POST['register'])) {
-    $username = trim($_POST['username']);
-    $email = trim($_POST['email']);
-    $rawPassword = $_POST['password'];
-    
-    if(empty($username)){
-       echo "<script>alert('Username is required'); window.location.href = 'index.php';</script>";
-       exit();
-    } else if(empty($email)){
-       echo "<script>alert('Email is required'); window.location.href = 'index.php';</script>";
-       exit();
-    } else if(empty($rawPassword)){
-       echo "<script>alert('Password is required'); window.location.href = 'index.php';</script>";
-       exit();
-    }
-    
-    $password = password_hash($rawPassword, PASSWORD_DEFAULT);
-    
-    if(registerAccount($username, $email, $password)){
-       echo "<script>alert('Registration successful! Please login.'); window.location.href = 'index.php';</script>";
-    } else {
-       echo "<script>alert('Registration failed. Email may already be in use.'); window.location.href = 'index.php';</script>";
-    }
+function searchSubjects(query) {
+  const suggestionsDiv = document.getElementById('searchSuggestions');
+  
+  if (!query.trim()) {
+    suggestionsDiv.style.display = 'none';
+    return;
+  }
+  
+  const lowerQuery = query.toLowerCase();
+  const matches = subjectsData.filter(subject =>subject.display_name.toLowerCase().includes(lowerQuery)
+  );
+  
+  if (matches.length === 0) {
+    suggestionsDiv.innerHTML = '<div class="no-results">Nothing found</div>';
+    suggestionsDiv.style.display = 'block';
+  } else {
+    suggestionsDiv.innerHTML = matches.map(subject => 
+      `<div class="suggestion-item" onclick="scrollToSubject(${subject.id})">
+        <strong>${subject.display_name}</strong>
+        <div style="font-size: 0.85em; color: #6c757d;">${subject.description}</div>
+      </div>`
+    ).join('');
+    suggestionsDiv.style.display = 'block';
+  }
 }
 
-// LOGIN HANDLER
-if(isset($_POST['login'])){
-    $email = trim($_POST['loginEmail']);
-    $password = $_POST['loginPass'];
-    
-    if(empty($email)){
-       echo "<script>alert('Email is required'); window.location.href = 'index.php';</script>";
-       exit();
-    } else if(empty($password)){
-       echo "<script>alert('Password is required'); window.location.href = 'index.php';</script>";
-       exit();
-    }
-    
-    if(loginAccount($email, $password)){
-        echo "<script>alert('Login successful!'); window.location.href = 'index.php';</script>";
-    } else {
-        echo "<script>alert('Invalid email or password.'); window.location.href = 'index.php';</script>";
-    }
+function handleSearch(event) {
+  event.preventDefault();
+  const query = document.getElementById('searchInput').value.trim();
+  
+  if (!query) {
+    return false;
+  }
+  
+  const lowerQuery = query.toLowerCase();
+  const match = subjectsData.find(subject => 
+    subject.display_name.toLowerCase().includes(lowerQuery)
+  );
+  
+  if (match) {
+    scrollToSubject(match.id);
+  } else {
+    alert('No subject found matching "' + query + '"');
+  }
+  
+  return false;
 }
 
-// DELETE SUBJECT HANDLER
-// DELETE SUBJECT HANDLER
-if (isset($_POST['delete_subject'])) {
-    if (!isLoggedIn()) {
-        echo "<script>alert('Please login first.'); window.location.href = 'index.php';</script>";
-        exit();
-    }
+function scrollToSubject(subjectId) {
+  const subjectCard = document.getElementById('subject-' + subjectId);
+  if (subjectCard) {
+    document.getElementById('searchSuggestions').style.display = 'none';
+    document.getElementById('searchInput').value = '';
     
-    $subjectId = intval($_POST['delete_subject']);
+    subjectCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
     
-    // Get subject to delete image file
-    $subject = getSubjectById($subjectId);
+    subjectCard.classList.add('subject-highlight');
     
-    if ($subject && deleteSubject($subjectId, getCurrentUserId())) {
-        // Delete image file if it's not the default
-        if ($subject['image_path'] && 
-            $subject['image_path'] !== 'img/default-card.png' && 
-            file_exists($subject['image_path'])) {
-            unlink($subject['image_path']);
-        }
-        
-        echo "<script>alert('Subject deleted successfully!'); window.location.href = 'index.php';</script>";
-    } else {
-        echo "<script>alert('Failed to delete subject. You may not own this subject.'); window.location.href = 'index.php';</script>";
-    }
+    setTimeout(() => {
+      subjectCard.classList.remove('subject-highlight');
+    }, 600);
+  }
 }
 
-// ADD SUBJECT HANDLER
-// ADD SUBJECT HANDLER
-if (isset($_POST['add_subject'])) {
-    if (!isLoggedIn()) {
-        echo "<script>alert('Please login first.'); window.location.href = 'index.php';</script>";
-        exit();
-    }
-    
-    $displayName = trim($_POST['display_name']);
-    $description = trim($_POST['description']);
-    $subjectName = preg_replace('/[^a-zA-Z0-9\s]/', '', $displayName);
-    $subjectName = preg_replace('/\s+/', '', $subjectName);
-    
-    // Default image path
-    $imagePath = 'img/default-card.png';
-    
-    // Handle file upload
-    if (isset($_FILES['subject_image']) && $_FILES['subject_image']['error'] === UPLOAD_ERR_OK) {
-        $uploadDir = 'uploads/subjects/';
-        
-        // Create directory if it doesn't exist
-        if (!is_dir($uploadDir)) {
-            mkdir($uploadDir, 0755, true);
-        }
-        
-        $fileTmpPath = $_FILES['subject_image']['tmp_name'];
-        $fileName = $_FILES['subject_image']['name'];
-        $fileSize = $_FILES['subject_image']['size'];
-        $fileType = $_FILES['subject_image']['type'];
-        $fileExtension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
-        
-        // Allowed extensions
-        $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif'];
-        
-        if (in_array($fileExtension, $allowedExtensions)) {
-            // Check file size (5MB max)
-            if ($fileSize <= 5 * 1024 * 1024) {
-                // Generate unique filename
-                $newFileName = 'subject_' . getCurrentUserId() . '_' . time() . '.' . $fileExtension;
-                $destPath = $uploadDir . $newFileName;
-                
-                // Move file to uploads directory
-                if (move_uploaded_file($fileTmpPath, $destPath)) {
-                    $imagePath = $destPath;
-                } else {
-                    echo "<script>alert('Error uploading image. Using default image.'); window.location.href = 'index.php';</script>";
-                }
-            } else {
-                echo "<script>alert('File size exceeds 5MB. Using default image.'); window.location.href = 'index.php';</script>";
-            }
-        } else {
-            echo "<script>alert('Invalid file type. Using default image.'); window.location.href = 'index.php';</script>";
-        }
-    }
-    
-    $subjectId = addSubject($subjectName, $displayName, $description, $imagePath, getCurrentUserId());
-    if ($subjectId) {
-        echo "<script>alert('Subject created successfully!'); window.location.href = 'index.php';</script>";
-    } else {
-        echo "<script>alert('Failed to create subject.'); window.location.href = 'index.php';</script>";
-    }
+document.addEventListener('click', function(event) {
+  const searchInput = document.getElementById('searchInput');
+  const suggestionsDiv = document.getElementById('searchSuggestions');
+  
+  if (!searchInput.contains(event.target) && !suggestionsDiv.contains(event.target)) {
+    suggestionsDiv.style.display = 'none';
+  }
+});
+
+document.getElementById('searchInput').addEventListener('keydown', function(event) {
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    handleSearch(event);
+  }
+});
+
+function showAddSubjectModal() {
+  <?php if (!isLoggedIn()): ?>
+    alert('Please login first to add subjects.');
+    return;
+  <?php endif; ?>
+  document.getElementById('addSubjectModal').style.display = 'block';
+  document.getElementById('addSubjectForm').reset();
+  document.getElementById('imagePreview').style.display = 'none';
 }
-?>
+
+function closeAddSubjectModal() {
+  document.getElementById('addSubjectModal').style.display = 'none';
+  document.getElementById('addSubjectForm').reset();
+  document.getElementById('imagePreview').style.display = 'none';
+}
+
+function previewImage(event) {
+  const file = event.target.files[0];
+  if (file) {
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File size must be less than 5MB');
+      event.target.value = '';
+      document.getElementById('imagePreview').style.display = 'none';
+      return;
+    }
+    
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+    if (!validTypes.includes(file.type)) {
+      alert('Please select a valid image file (JPG, PNG, or GIF)');
+      event.target.value = '';
+      document.getElementById('imagePreview').style.display = 'none';
+      return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      document.getElementById('previewImg').src = e.target.result;
+      document.getElementById('imagePreview').style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+  } else {
+    document.getElementById('imagePreview').style.display = 'none';
+  }
+}
+
+function deleteSubjectCard(subjectId) {
+  if (confirm('Are you sure you want to delete this subject? This will remove all associated data.')) {
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.innerHTML = '<input type="hidden" name="delete_subject" value="' + subjectId + '">';
+    document.body.appendChild(form);
+    form.submit();
+  }
+}
+    </script>
+  </body>
+</html>
