@@ -1,11 +1,12 @@
 IN ORDER TO RUN THIS
 PLEASE RUN THE FOLLOWING MYSQL SCRIPT!
 
-
+CREATE DATABASE cramtayo_db;
  DROP TABLE IF EXISTS study_cards;
  DROP TABLE IF EXISTS subjects;
  DROP TABLE IF EXISTS users;
 
+USE cramtayo_db;
 -- Users table
 CREATE TABLE IF NOT EXISTS users (
     user_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -63,3 +64,4 @@ CREATE TABLE IF NOT EXISTS study_cards (
     INDEX idx_sort_order (sort_order)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+>>>>>>> 5f41bdf60d6a4f6accfbcdb5de7c2c459537712b
