@@ -199,7 +199,79 @@ $sections = getSections($subjectId);
   <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans&display=swap" rel="stylesheet">
   <link href="css/styles.css" rel="stylesheet" />
   <style>
+/* Enhanced Quiz Button Feedback Styles */
+.quiz-controls .btn {
+  min-width: 120px;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
 
+.quiz-controls .btn-success {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  border: none;
+  box-shadow: 0 4px 6px rgba(34, 197, 94, 0.3);
+}
+
+.quiz-controls .btn-success:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(34, 197, 94, 0.4);
+}
+
+.quiz-controls .btn-success:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(34, 197, 94, 0.3);
+}
+
+.quiz-controls .btn-danger {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  border: none;
+  box-shadow: 0 4px 6px rgba(239, 68, 68, 0.3);
+}
+
+.quiz-controls .btn-danger:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(239, 68, 68, 0.4);
+}
+
+.quiz-controls .btn-danger:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+}
+
+/* Ripple effect on click */
+.quiz-controls .btn::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.quiz-controls .btn:active::after {
+  width: 300px;
+  height: 300px;
+}
+
+/* Loading/waiting state hint */
+.quiz-controls[data-waiting="true"] .btn {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Smooth transitions for the flashcard reward animation */
+.quiz-flashcard {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.quiz-flashcard-inner {
+  transition: border 0.3s ease;
+}
     .card-description {
     font-size: 0.95rem;
     line-height: 1.4;
@@ -797,12 +869,16 @@ $sections = getSections($subjectId);
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="js/script.js"></script>
 <script>
+
 // Quiz Mode Variables
 let quizCards = [];
 let currentQuizIndex = 0;
 let isFlipped = false;
 let score = 0;
 let answeredCards = new Set();
+let flipTimer = null;
+let canFlip = true; // Controls whether card can be flipped
+let hasAnsweredCurrentCard = false; // Track if current card has been answered
 
 function filterCards() {
   const input = document.getElementById('cardSearchInput').value.toLowerCase();
@@ -811,21 +887,20 @@ function filterCards() {
   cards.forEach(card => {
     const title = card.getAttribute('data-card-title') || '';
     if (title.toLowerCase().includes(input)) {
-      card.style.display = ''; // show
+      card.style.display = '';
     } else {
-      card.style.display = 'none'; // hide
+      card.style.display = 'none';
     }
   });
 }
 
 function startQuizMode() {
-  // Show section selection modal instead of directly starting quiz
   const modalEl = document.getElementById('sectionSelectModal');
   const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
   bsModal.show();
 }
+
 function selectQuizSection(sectionId) {
-  // Close section selection modal
   const selectModal = bootstrap.Modal.getInstance(document.getElementById('sectionSelectModal'));
   selectModal.hide();
 
@@ -833,7 +908,6 @@ function selectQuizSection(sectionId) {
   answeredCards.clear();
   updateScoreDisplay();
   
-  // Collect all cards data
   const cardsData = <?php 
     echo json_encode(array_map(function($section) use ($subjectId) {
       return [
@@ -843,9 +917,7 @@ function selectQuizSection(sectionId) {
     }, $sections));
   ?>;
   
-  // Filter cards based on selection
   if (sectionId === 'all') {
-    // Combine all cards from all sections
     quizCards = [];
     cardsData.forEach(sectionData => {
       if (sectionData.cards && sectionData.cards.length > 0) {
@@ -860,7 +932,6 @@ function selectQuizSection(sectionId) {
       }
     });
   } else {
-    // Get cards from specific section
     const sectionData = cardsData.find(s => s.section_id == sectionId);
     
     if (!sectionData || !sectionData.cards || sectionData.cards.length === 0) {
@@ -884,45 +955,91 @@ function selectQuizSection(sectionId) {
   currentQuizIndex = 0;
   isFlipped = false;
   
-  // Show the quiz modal
   const quizModalEl = document.getElementById('quizModal');
   const bsQuizModal = bootstrap.Modal.getOrCreateInstance(quizModalEl);
   bsQuizModal.show();
   
-  // Display first card
   displayCurrentCard();
 }
+
 function displayCurrentCard() {
   if (quizCards.length === 0) return;
   
   const card = quizCards[currentQuizIndex];
   
-  // Reset logic
+  // Reset flip state
   isFlipped = false;
+  canFlip = true; // Allow flipping for new card
+  hasAnsweredCurrentCard = false; // Reset answer state for new card
   const flashcard = document.getElementById('quizFlashcard');
   if (flashcard) {
-      flashcard.classList.remove('flipped'); // This is the key line
+    flashcard.classList.remove('flipped');
+    flashcard.style.cursor = 'pointer'; // Enable pointer
   }
 
-  // Update Progress and Content
+  // Clear any existing timer
+  if (flipTimer) {
+    clearTimeout(flipTimer);
+    flipTimer = null;
+  }
+
   document.getElementById('quizProgress').textContent = `Card ${currentQuizIndex + 1} of ${quizCards.length}`;
   document.getElementById('quizCardTitle').textContent = card.title;
   document.getElementById('quizCardContent').textContent = card.content;
   
-  // ... rest of your image handling code ...
+  // Handle image
+  const imageContainer = document.getElementById('quizCardImageContainer');
+  const imageElement = document.getElementById('quizCardImage');
   
-  // Hide answer buttons initially for the new card
+  if (card.image_path && card.image_path !== '') {
+    imageElement.src = card.image_path;
+    imageContainer.style.display = 'block';
+  } else {
+    imageContainer.style.display = 'none';
+  }
+  
+  // Hide controls initially
   document.getElementById('answerControls').style.display = 'none';
 }
+
 function flipCard() {
-  isFlipped = !isFlipped;
+  // Check if flipping is allowed
+  if (!canFlip) {
+    return; // Do nothing if card is locked
+  }
+
   const flashcard = document.getElementById('quizFlashcard');
   const controls = document.getElementById('answerControls');
 
-  if (isFlipped) {
+  if (!isFlipped) {
+    // Flipping to back (showing answer)
+    isFlipped = true;
     flashcard.classList.add('flipped');
-    controls.style.display = 'flex';
+    
+    // Only lock the card if user hasn't answered yet
+    if (!hasAnsweredCurrentCard) {
+      // LOCK THE CARD - prevent flipping back until answered
+      canFlip = false;
+      flashcard.style.cursor = 'not-allowed';
+      
+      // Show buttons immediately (fully enabled and clickable)
+      controls.style.display = 'flex';
+      
+      // Start 12 second timer to unlock card
+      flipTimer = setTimeout(() => {
+        // After 12 seconds, unlock the card
+        canFlip = true;
+        flashcard.style.cursor = 'pointer';
+        flipTimer = null;
+      }, 12000); // 12 seconds
+    } else {
+      // User already answered, show buttons immediately
+      controls.style.display = 'flex';
+    }
+    
   } else {
+    // Flipping back to front
+    isFlipped = false;
     flashcard.classList.remove('flipped');
     controls.style.display = 'none';
   }
@@ -931,20 +1048,108 @@ function flipCard() {
 function markAnswer(isCorrect) {
   const cardId = quizCards[currentQuizIndex].id;
 
-  // Prevent double scoring for the same card
+  // Mark that user has answered this card
+  hasAnsweredCurrentCard = true;
+
+  // Clear the timer if it's still running
+  if (flipTimer) {
+    clearTimeout(flipTimer);
+    flipTimer = null;
+  }
+
+  // UNLOCK the card immediately - user can now flip freely
+  canFlip = true;
+  const flashcard = document.getElementById('quizFlashcard');
+  flashcard.style.cursor = 'pointer';
+
+  // Ensure controls are visible
+  const controls = document.getElementById('answerControls');
+  controls.style.display = 'flex';
+
+  // Prevent double scoring
   if (answeredCards.has(cardId)) return;
   answeredCards.add(cardId);
   
   if (isCorrect) {
     score++;
+    
+    // Play success sound
+    playSuccessSound();
+    
+    // Add visual reward animation
+    flashcard.style.transition = 'transform 0.3s ease, box-shadow 0.3s ease';
+    flashcard.style.transform = 'scale(1.05)';
+    flashcard.style.boxShadow = '0 0 30px rgba(34, 197, 94, 0.6)';
+    
+    // Add green highlight
+    const flashcardInner = document.getElementById('quizFlashcardInner');
+    const originalBorder = flashcardInner.style.border;
+    flashcardInner.style.border = '4px solid #22c55e';
+    
+    // Reset after animation
+    setTimeout(() => {
+      flashcard.style.transform = 'scale(1)';
+      flashcard.style.boxShadow = '';
+      flashcardInner.style.border = originalBorder;
+    }, 500);
+  } else {
+    // Play wrong answer sound
+    playWrongSound();
+    
+    // Optional: subtle visual feedback for wrong answer
+    const wrongBtn = document.querySelector('.quiz-controls .btn-danger');
+    if (wrongBtn) {
+      wrongBtn.style.transform = 'scale(1.1)';
+      setTimeout(() => {
+        wrongBtn.style.transform = 'scale(1)';
+      }, 200);
+    }
   }
-  updateScoreDisplay();
-
-  // Visual feedback: Optional, but you could change the button colors here
-  // to show the choice was registered.
   
-  // We do NOT flip the card or move to the next index here.
-  // The user will click the "Next" button manually.
+  updateScoreDisplay();
+}
+
+function playSuccessSound() {
+  // Create and play a simple success sound using Web Audio API
+  const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  const oscillator = audioContext.createOscillator();
+  const gainNode = audioContext.createGain();
+  
+  oscillator.connect(gainNode);
+  gainNode.connect(audioContext.destination);
+  
+  // Success sound: ascending notes
+  oscillator.type = 'sine';
+  oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime); // C5
+  oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.1); // E5
+  oscillator.frequency.setValueAtTime(783.99, audioContext.currentTime + 0.2); // G5
+  
+  gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+  gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
+  
+  oscillator.start(audioContext.currentTime);
+  oscillator.stop(audioContext.currentTime + 0.4);
+}
+
+function playWrongSound() {
+  // Create a "wrong answer" sound - descending tone
+  const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  const oscillator = audioContext.createOscillator();
+  const gainNode = audioContext.createGain();
+  
+  oscillator.connect(gainNode);
+  gainNode.connect(audioContext.destination);
+  
+  // Wrong sound: descending notes (sad trombone style)
+  oscillator.type = 'sawtooth';
+  oscillator.frequency.setValueAtTime(400, audioContext.currentTime); // Starting note
+  oscillator.frequency.exponentialRampToValueAtTime(200, audioContext.currentTime + 0.3); // Descend
+  
+  gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+  gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+  
+  oscillator.start(audioContext.currentTime);
+  oscillator.stop(audioContext.currentTime + 0.3);
 }
 
 function updateScoreDisplay() {
@@ -954,15 +1159,15 @@ function updateScoreDisplay() {
 
 function nextCard() {
   if (currentQuizIndex < quizCards.length - 1) {
-    // 1. Clear the answer text first so it's not seen during the flip
     document.getElementById('quizCardContent').textContent = "";
     
-    // 2. Flip back to front
     isFlipped = false;
+    canFlip = true;
+    hasAnsweredCurrentCard = false; // Reset for next card
     document.getElementById('quizFlashcard').classList.remove('flipped');
+    document.getElementById('quizFlashcard').style.cursor = 'pointer';
     document.getElementById('answerControls').style.display = 'none';
 
-    // 3. Move to next card after a tiny delay for the flip animation
     setTimeout(() => {
       currentQuizIndex++;
       displayCurrentCard();
@@ -974,10 +1179,12 @@ function nextCard() {
 
 function previousCard() {
   if (currentQuizIndex > 0) {
-    // Clear content and flip back
     document.getElementById('quizCardContent').textContent = "";
     isFlipped = false;
+    canFlip = true;
+    hasAnsweredCurrentCard = false; // Reset for previous card
     document.getElementById('quizFlashcard').classList.remove('flipped');
+    document.getElementById('quizFlashcard').style.cursor = 'pointer';
     document.getElementById('answerControls').style.display = 'none';
 
     setTimeout(() => {
@@ -988,7 +1195,6 @@ function previousCard() {
 }
 
 function shuffleCards() {
-  // Fisher-Yates shuffle
   for (let i = quizCards.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [quizCards[i], quizCards[j]] = [quizCards[j], quizCards[i]];
@@ -1003,15 +1209,24 @@ function resetQuiz() {
   score = 0;
   answeredCards.clear();
   isFlipped = false;
+  canFlip = true;
+  hasAnsweredCurrentCard = false;
 
-  document.getElementById('quizFlashcard').classList.remove('flipped');
+  if (flipTimer) {
+    clearTimeout(flipTimer);
+    flipTimer = null;
+  }
+
+  const flashcard = document.getElementById('quizFlashcard');
+  flashcard.classList.remove('flipped');
+  flashcard.style.cursor = 'pointer';
   document.getElementById('answerControls').style.display = 'none';
 
   updateScoreDisplay();
   displayCurrentCard();
 }
 
-// Keyboard navigation for quiz mode
+// Keyboard navigation
 document.addEventListener('keydown', function(event) {
   const quizModal = document.getElementById('quizModal');
   const isQuizOpen = quizModal.classList.contains('show');
@@ -1029,6 +1244,7 @@ document.addEventListener('keydown', function(event) {
     flipCard();
   }
 });
+
 
 function viewCard(title, content, imagePath) {
   // Set title
