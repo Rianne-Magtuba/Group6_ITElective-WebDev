@@ -639,8 +639,9 @@ if (isset($_POST['add_subject'])) {
     <form id="addSubjectForm" method="POST" enctype="multipart/form-data">
       <input type="hidden" name="add_subject" value="1">
       
-      <label style="display: block; margin-bottom: 5px; font-weight: bold;">Subject Name:</label>
-      <input type="text" name="display_name" id="displayName" placeholder="e.g., Systems Integration and Architecture" required style="width: 100%; padding: 8px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px;">
+  <label style="display: block; margin-bottom: 5px; font-weight: bold;">Subject Name:</label>
+<input type="text" name="display_name" id="displayName" placeholder="e.g., Systems Integration and Architecture" maxlength="40" required style="width: 100%; padding: 8px; margin-bottom: 5px; border: 1px solid #ccc; border-radius: 4px;">
+<div id="subjectNameCharCounter" style="text-align: right; font-size: 0.85rem; color: #666; margin-bottom: 15px;">0/40</div>
       
       <label style="display: block; margin-bottom: 5px; font-weight: bold;">Description:</label>
       <textarea name="description" id="description" placeholder="Brief description of the subject" required style="width: 100%; padding: 8px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; height: 80px; resize: vertical;"></textarea>
@@ -765,9 +766,40 @@ function showAddSubjectModal() {
     alert('Please login first to add subjects.');
     return;
   <?php endif; ?>
-  document.getElementById('addSubjectModal').style.display = 'block';
-  document.getElementById('addSubjectForm').reset();
+  
+  const modal = document.getElementById('addSubjectModal');
+  const form = document.getElementById('addSubjectForm');
+  const input = document.getElementById('displayName');
+  const charCounter = document.getElementById('subjectNameCharCounter');
+  
+  // Reset form and counter
+  form.reset();
+  charCounter.textContent = '0/40';
+  charCounter.style.color = '#666';
+  charCounter.style.fontWeight = 'normal';
+  
+  // Hide image preview
   document.getElementById('imagePreview').style.display = 'none';
+  
+  // Character counter listener
+  input.oninput = function() {
+    const length = input.value.length;
+    charCounter.textContent = `${length}/40`;
+    
+    if (length >= 40) {
+      charCounter.style.color = '#dc2626';
+      charCounter.style.fontWeight = 'bold';
+    } else if (length >= 35) {
+      charCounter.style.color = '#f59e0b';
+    } else {
+      charCounter.style.color = '#666';
+      charCounter.style.fontWeight = 'normal';
+    }
+  };
+  
+  // Show modal
+  modal.style.display = 'block';
+  input.focus();
 }
 
 function closeAddSubjectModal() {

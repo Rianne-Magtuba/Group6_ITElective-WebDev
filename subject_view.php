@@ -199,6 +199,18 @@ $sections = getSections($subjectId);
   <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans&display=swap" rel="stylesheet">
   <link href="css/styles.css" rel="stylesheet" />
   <style>
+@keyframes slideIn {
+  from {
+    transform: translate(-50%, -60%);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, -50%);
+    opacity: 1;
+  }
+}
+
+
 /* Enhanced Quiz Button Feedback Styles */
 .quiz-controls .btn {
   min-width: 120px;
@@ -401,10 +413,16 @@ $sections = getSections($subjectId);
       transform: rotateY(180deg);
     }
     
-    .quiz-flashcard-front h2 {
+        .quiz-flashcard-front h2 {
       margin-bottom: 20px;
       font-weight: bold;
       font-size: 2rem;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      word-break: break-word;
+      hyphens: auto;
+      max-width: 100%;
+      padding: 0 20px;
     }
     
     .quiz-flashcard-back h3 {
@@ -699,11 +717,13 @@ $sections = getSections($subjectId);
 ">
   <p>Enter new section name:</p>
   <input type="text" id="newSectionName" placeholder="Section name" style="width: 100%; padding: 8px; margin-top: 5px; border-radius: 5px; border: 1px solid #ccc;">
+  <div id="sectionCharCounter" style="text-align: right; font-size: 0.85rem; color: #666; margin-top: 5px;">0/30</div>
   <div style="text-align: right; margin-top: 15px;">
     <button id="addSectionConfirm" style="margin-right:10px;">Add</button>
     <button id="addSectionCancel">Cancel</button>
   </div>
 </div>
+
 
 <!-- Confirmation Modal -->
 <div id="confirmModal" class="hidden" style="
@@ -761,11 +781,11 @@ $sections = getSections($subjectId);
         <div class="modal-body">
           <input type="hidden" id="modal_section_id" name="section_id" value="">
           
-          <div class="mb-3">
-            <label class="form-label">Title</label>
-            <input type="text" name="title" class="form-control" required />
-          </div>
-          
+            <div class="mb-3">
+      <label class="form-label">Title</label>
+      <input type="text" name="title" id="addCardTitle" class="form-control" maxlength="150" required />
+      <div id="addCardCharCounter" style="text-align: right; font-size: 0.85rem; color: #666; margin-top: 5px;">0/150</div>
+    </div>
           <div class="mb-3">
             <label class="form-label">Content</label>
             <textarea name="content" class="form-control" rows="4" required></textarea>
@@ -813,10 +833,11 @@ $sections = getSections($subjectId);
           <input type="hidden" id="edit_card_id" name="edit_card_id" value="">
           <input type="hidden" id="edit_current_image" name="current_image_path" value="">
           
-          <div class="mb-3">
-            <label class="form-label">Title</label>
-            <input type="text" name="edit_title" id="edit_title" class="form-control" required />
-          </div>
+              <div class="mb-3">
+        <label class="form-label">Title</label>
+        <input type="text" name="edit_title" id="edit_title" class="form-control" maxlength="150" required />
+        <div id="editCardCharCounter" style="text-align: right; font-size: 0.85rem; color: #666; margin-top: 5px;">0/150</div>
+      </div>
           
           <div class="mb-3">
             <label class="form-label">Content</label>
@@ -865,6 +886,40 @@ $sections = getSections($subjectId);
     </div>
   </div>
 </div>
+
+
+<!-- Quiz Complete Modal -->
+<div id="quizCompleteModal" class="hidden" style="
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    padding: 40px;
+    border-radius: 15px;
+    z-index: 3000;
+    min-width: 400px;
+    text-align: center;
+    color: white;
+    animation: slideIn 0.5s ease-out;
+">
+  <div id="quizCompleteEmoji" style="font-size: 3rem; margin-bottom: 20px;">🎉</div>
+  <h2 id="quizCompleteTitle" style="font-size: 2rem; font-weight: bold; margin-bottom: 15px;">Quiz Complete!</h2>
+  <p id="quizCompleteScore" style="font-size: 1.5rem; margin-bottom: 25px;"></p>
+  <button id="quizCompleteOk" style="
+    background: white;
+    border: none;
+    padding: 12px 30px;
+    border-radius: 25px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    transition: transform 0.2s;
+  " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+    Great!
+  </button>
+</div>
+
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="js/script.js"></script>
@@ -984,7 +1039,11 @@ function displayCurrentCard() {
   }
 
   document.getElementById('quizProgress').textContent = `Card ${currentQuizIndex + 1} of ${quizCards.length}`;
-  document.getElementById('quizCardTitle').textContent = card.title;
+    const titleElement = document.getElementById('quizCardTitle');
+  titleElement.textContent = card.title;
+  titleElement.style.wordWrap = 'break-word';
+  titleElement.style.overflowWrap = 'break-word';
+  titleElement.style.wordBreak = 'break-word';
   document.getElementById('quizCardContent').textContent = card.content;
   
   // Handle image
@@ -1001,12 +1060,34 @@ function displayCurrentCard() {
   // Hide controls initially
   document.getElementById('answerControls').style.display = 'none';
 }
+function playFlipSound() {
+  const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  const oscillator = audioContext.createOscillator();
+  const gainNode = audioContext.createGain();
+  
+  oscillator.connect(gainNode);
+  gainNode.connect(audioContext.destination);
+  
+  // Flip sound: quick ascending chirp
+  oscillator.type = 'sine';
+  oscillator.frequency.setValueAtTime(400, audioContext.currentTime);
+  oscillator.frequency.exponentialRampToValueAtTime(800, audioContext.currentTime + 0.1);
+  
+  gainNode.gain.setValueAtTime(0.15, audioContext.currentTime);
+  gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+  
+  oscillator.start();
+  oscillator.stop(audioContext.currentTime + 0.1);
+}
 
 function flipCard() {
-  // Check if flipping is allowed
+  // Check if flipping is allowed FIRST
   if (!canFlip) {
-    return; // Do nothing if card is locked
+    return; // Do nothing if card is locked - no sound either
   }
+  
+  // Play flip sound only if flip is allowed
+  playFlipSound();
 
   const flashcard = document.getElementById('quizFlashcard');
   const controls = document.getElementById('answerControls');
@@ -1044,7 +1125,6 @@ function flipCard() {
     controls.style.display = 'none';
   }
 }
-
 function markAnswer(isCorrect) {
   const cardId = quizCards[currentQuizIndex].id;
 
@@ -1110,7 +1190,6 @@ function markAnswer(isCorrect) {
 }
 
 function playSuccessSound() {
-  // Create and play a simple success sound using Web Audio API
   const audioContext = new (window.AudioContext || window.webkitAudioContext)();
   const oscillator = audioContext.createOscillator();
   const gainNode = audioContext.createGain();
@@ -1118,16 +1197,15 @@ function playSuccessSound() {
   oscillator.connect(gainNode);
   gainNode.connect(audioContext.destination);
   
-  // Success sound: ascending notes
   oscillator.type = 'sine';
-  oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime); // C5
-  oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.1); // E5
-  oscillator.frequency.setValueAtTime(783.99, audioContext.currentTime + 0.2); // G5
+  oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime);
+  oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.1);
+  oscillator.frequency.setValueAtTime(783.99, audioContext.currentTime + 0.2);
   
   gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
   gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
   
-  oscillator.start(audioContext.currentTime);
+  oscillator.start();  // CHANGED: removed audioContext.currentTime parameter
   oscillator.stop(audioContext.currentTime + 0.4);
 }
 
@@ -1145,7 +1223,7 @@ function playWrongSound() {
   oscillator.frequency.setValueAtTime(400, audioContext.currentTime); // Starting note
   oscillator.frequency.exponentialRampToValueAtTime(200, audioContext.currentTime + 0.3); // Descend
   
-  gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+  gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
   gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
   
   oscillator.start(audioContext.currentTime);
@@ -1173,7 +1251,7 @@ function nextCard() {
       displayCurrentCard();
     }, 200); 
   } else {
-    alert("You've reached the end of the quiz! Final Score: " + score + " / " + quizCards.length);
+     showQuizCompleteModal();
   }
 }
 
@@ -1225,7 +1303,49 @@ function resetQuiz() {
   updateScoreDisplay();
   displayCurrentCard();
 }
-
+function showQuizCompleteModal() {
+  const modal = document.getElementById('quizCompleteModal');
+  const scoreText = document.getElementById('quizCompleteScore');
+  const titleText = document.getElementById('quizCompleteTitle');
+  const emoji = document.getElementById('quizCompleteEmoji');
+  const okBtn = document.getElementById('quizCompleteOk');
+  const backdrop = document.getElementById('modalBackdrop');
+  
+  const percentage = Math.round((score / quizCards.length) * 100);
+  scoreText.textContent = `You scored ${score} out of ${quizCards.length} (${percentage}%)`;
+  
+  // Change appearance based on score
+  if (percentage < 30) {
+    modal.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+    modal.style.boxShadow = '0 10px 30px rgba(239, 68, 68, 0.4)';
+    emoji.textContent = '📚';
+    titleText.textContent = 'Keep Practicing!';
+    okBtn.style.color = '#dc2626';
+    okBtn.textContent = 'Try Again';
+  } else {
+    modal.style.background = 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)';
+    modal.style.boxShadow = '0 10px 30px rgba(34, 197, 94, 0.4)';
+    emoji.textContent = '🎉';
+    titleText.textContent = 'Quiz Complete!';
+    okBtn.style.color = '#16a34a';
+    okBtn.textContent = 'Great!';
+  }
+  
+  backdrop.classList.remove('hidden');
+  modal.classList.remove('hidden');
+  
+  okBtn.onclick = function() {
+    modal.classList.add('hidden');
+    backdrop.classList.add('hidden');
+    
+    const quizModal = bootstrap.Modal.getInstance(document.getElementById('quizModal'));
+    if (quizModal) {
+      quizModal.hide();
+    }
+    
+    resetQuiz();
+  };
+}
 // Keyboard navigation
 document.addEventListener('keydown', function(event) {
   const quizModal = document.getElementById('quizModal');
@@ -1320,7 +1440,6 @@ function editCardFromButton(button) {
   const cardDiv = button.closest('.review-card');
   const cardId = cardDiv.getAttribute('data-card-id');
   
-  // Use the AJAX approach to get full card data
   fetch('get_card_data.php?id=' + cardId)
     .then(response => response.json())
     .then(card => {
@@ -1329,6 +1448,39 @@ function editCardFromButton(button) {
       document.getElementById('edit_content').value = card.content;
       document.getElementById('edit_card_type').value = card.card_type || 'normal';
       document.getElementById('edit_current_image').value = card.image_path || '';
+      
+      // Setup character counter
+      const titleInput = document.getElementById('edit_title');
+      const charCounter = document.getElementById('editCardCharCounter');
+      
+      const length = titleInput.value.length;
+      charCounter.textContent = `${length}/150`;
+      
+      if (length >= 150) {
+        charCounter.style.color = '#dc2626';
+        charCounter.style.fontWeight = 'bold';
+      } else if (length >= 140) {
+        charCounter.style.color = '#f59e0b';
+      } else {
+        charCounter.style.color = '#666';
+        charCounter.style.fontWeight = 'normal';
+      }
+      
+      // Character counter listener
+      titleInput.oninput = function() {
+        const length = titleInput.value.length;
+        charCounter.textContent = `${length}/150`;
+        
+        if (length >= 150) {
+          charCounter.style.color = '#dc2626';
+          charCounter.style.fontWeight = 'bold';
+        } else if (length >= 140) {
+          charCounter.style.color = '#f59e0b';
+        } else {
+          charCounter.style.color = '#666';
+          charCounter.style.fontWeight = 'normal';
+        }
+      };
       
       if (card.image_path && card.image_path !== '') {
         document.getElementById('editCurrentImg').src = card.image_path;
@@ -1364,6 +1516,39 @@ function editCard(id, title, content, event) {
       document.getElementById('edit_card_type').value = card.card_type || 'normal';
       document.getElementById('edit_current_image').value = card.image_path || '';
       
+      // Setup character counter
+      const titleInput = document.getElementById('edit_title');
+      const charCounter = document.getElementById('editCardCharCounter');
+      
+      const length = titleInput.value.length;
+      charCounter.textContent = `${length}/150`;
+      
+      if (length >= 150) {
+        charCounter.style.color = '#dc2626';
+        charCounter.style.fontWeight = 'bold';
+      } else if (length >= 140) {
+        charCounter.style.color = '#f59e0b';
+      } else {
+        charCounter.style.color = '#666';
+        charCounter.style.fontWeight = 'normal';
+      }
+      
+      // Character counter listener
+      titleInput.oninput = function() {
+        const length = titleInput.value.length;
+        charCounter.textContent = `${length}/150`;
+        
+        if (length >= 150) {
+          charCounter.style.color = '#dc2626';
+          charCounter.style.fontWeight = 'bold';
+        } else if (length >= 140) {
+          charCounter.style.color = '#f59e0b';
+        } else {
+          charCounter.style.color = '#666';
+          charCounter.style.fontWeight = 'normal';
+        }
+      };
+      
       if (card.image_path && card.image_path !== '') {
         document.getElementById('editCurrentImg').src = card.image_path;
         document.getElementById('editCurrentImagePreview').style.display = 'block';
@@ -1384,7 +1569,6 @@ function editCard(id, title, content, event) {
       alert('Failed to load card data');
     });
 }
-
 function previewEditCardImage(event) {
   const file = event.target.files[0];
   if (file) {
@@ -1424,6 +1608,30 @@ function showAddCardModal(sectionId) {
   document.getElementById('addCardForm').reset();
   document.getElementById('modal_section_id').value = sectionId;
   document.getElementById('cardImagePreview').style.display = 'none';
+  
+  // Setup character counter
+  const titleInput = document.getElementById('addCardTitle');
+  const charCounter = document.getElementById('addCardCharCounter');
+  
+  charCounter.textContent = '0/150';
+  charCounter.style.color = '#666';
+  charCounter.style.fontWeight = 'normal';
+  
+  // Character counter listener
+  titleInput.oninput = function() {
+    const length = titleInput.value.length;
+    charCounter.textContent = `${length}/150`;
+    
+    if (length >= 150) {
+      charCounter.style.color = '#dc2626';
+      charCounter.style.fontWeight = 'bold';
+    } else if (length >= 145) {
+      charCounter.style.color = '#f59e0b';
+    } else {
+      charCounter.style.color = '#666';
+      charCounter.style.fontWeight = 'normal';
+    }
+  };
   
   const modalEl = document.getElementById("addCardModal");
   const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
@@ -1469,15 +1677,35 @@ function showAddSectionModal() {
   const input = document.getElementById('newSectionName');
   const confirmBtn = document.getElementById('addSectionConfirm');
   const cancelBtn = document.getElementById('addSectionCancel');
-  const backdrop = document.getElementById('modalBackdrop'); // overlay div
+  const backdrop = document.getElementById('modalBackdrop');
+  const charCounter = document.getElementById('sectionCharCounter');
 
   // Reset input
   input.value = '';
+  input.maxLength = 30;
+  charCounter.textContent = '0/30';
+  charCounter.style.color = '#666';
 
   // Show modal + overlay
   backdrop.classList.remove('hidden');
   modal.classList.remove('hidden');
   input.focus();
+
+  // Character counter listener
+  input.oninput = function() {
+    const length = input.value.length;
+    charCounter.textContent = `${length}/30`;
+    
+    if (length >= 30) {
+      charCounter.style.color = '#dc2626';
+      charCounter.style.fontWeight = 'bold';
+    } else if (length >= 25) {
+      charCounter.style.color = '#f59e0b';
+    } else {
+      charCounter.style.color = '#666';
+      charCounter.style.fontWeight = 'normal';
+    }
+  };
 
   // Remove previous handlers to prevent duplicates
   confirmBtn.onclick = null;
@@ -1487,7 +1715,7 @@ function showAddSectionModal() {
   confirmBtn.onclick = function() {
     const sectionName = input.value.trim();
     if (sectionName === '') {
-      showNotification('Section name cannot be empty', 'error');
+      alert('Section name cannot be empty');
       input.focus();
       return;
     }
@@ -1512,7 +1740,6 @@ function showAddSectionModal() {
     document.body.appendChild(form);
     form.submit();
 
-    // Hide modal + overlay
     modal.classList.add('hidden');
     backdrop.classList.add('hidden');
   };
