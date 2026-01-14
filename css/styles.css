@@ -51,6 +51,110 @@ section {
 }
 
 
+#navbar.scrolled .nav-link.disabled {
+  color: black !important;
+}
+
+.no-results {
+  padding: 10px 12px;
+  color: #6c757d;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+
+  #searchSuggestions {
+    
+        position: absolute;
+        background: white;
+        border: 1px solid #000000;
+        border-radius: 8px;
+        max-height: 300px;
+        overflow-y: auto;
+        width: 100%;
+        z-index: 1000;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        display: none;
+        margin-top: 5px;
+      }
+      .suggestion-item {
+  padding: 12px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid #010000;
+  transition: background-color 0.2s;
+}
+.suggestion-item strong {
+  color: #000000;
+}
+      .suggestion-item:hover {
+        background-color: #f8f9fa;
+      }
+      .suggestion-item:last-child {
+        border-bottom: none;
+      }
+      .no-results {
+        padding: 12px 16px;
+        color: #6c757d;
+        text-align: center;
+      }
+      .search-wrapper {
+        position: relative;
+        width: 100%;
+        max-width: 500px;
+      }
+      .subject-highlight {
+        animation: highlightPulse 0.6s ease;
+      }
+      @keyframes highlightPulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); box-shadow: 0 0 20px rgba(0, 123, 255, 0.5); }
+        100% { transform: scale(1); }
+      }
+
+
+
+      /* Notification Popup - Centered at top */
+.notify {
+  position: fixed;
+  top: 20px; /* distance from the top */
+  left: 50%; /* center horizontally */
+  transform: translateX(-50%); /* perfect center */
+  min-width: 250px;
+  padding: 12px 18px;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.95rem;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+  z-index: 2000;
+  opacity: 1;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+/* Hidden */
+.notify.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -10px); /* moves slightly up when hidden */
+}
+
+/* Types */
+.notify.success {
+  background-color: #198754; /* Bootstrap success */
+}
+
+.notify.error {
+  background-color: #dc3545; /* Bootstrap danger */
+}
+
+.notify.info {
+  background-color: #0d6efd; /* Bootstrap primary */
+}
+
+.hidden {
+  display: none !important;
+}
+
+
 /* Hero / Photo Section*/
 .photo-section {
     height: 100vh;

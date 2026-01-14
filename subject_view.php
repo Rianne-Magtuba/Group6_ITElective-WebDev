@@ -550,6 +550,46 @@ text-align: left;
   </div>
 </div>
 
+<!-- Add Section Modal -->
+<div id="addSectionModal" class="hidden" style="
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #fff;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    z-index: 3000;
+    min-width: 300px;
+">
+  <p>Enter new section name:</p>
+  <input type="text" id="newSectionName" placeholder="Section name" style="width: 100%; padding: 8px; margin-top: 5px; border-radius: 5px; border: 1px solid #ccc;">
+  <div style="text-align: right; margin-top: 15px;">
+    <button id="addSectionConfirm" style="margin-right:10px;">Add</button>
+    <button id="addSectionCancel">Cancel</button>
+  </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div id="confirmModal" class="hidden" style="
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #fff;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    z-index: 3000;
+    min-width: 300px;
+">
+  <p id="confirmMessage">Are you sure?</p>
+  <div style="text-align: right; margin-top: 15px;">
+    <button id="confirmYes" style="margin-right:10px;">Yes</button>
+    <button id="confirmCancel">Cancel</button>
+  </div>
+</div>
 
 
 <!-- View Card Modal -->
@@ -1055,66 +1095,121 @@ function clearCardImage() {
 }
 
 function showAddSectionModal() {
-  const sectionName = prompt("Enter new section name:");
-  if (sectionName && sectionName.trim() !== "") {
-    const form = document.createElement("form");
-    form.method = "POST";
-    form.style.display = "none";
+  const modal = document.getElementById('addSectionModal');
+  const input = document.getElementById('newSectionName');
+  const confirmBtn = document.getElementById('addSectionConfirm');
+  const cancelBtn = document.getElementById('addSectionCancel');
 
-    const flag = document.createElement("input");
-    flag.type = "hidden";
-    flag.name = "add_section";
-    flag.value = "1";
+  // Reset input
+  input.value = '';
+
+  // Show modal
+  modal.classList.remove('hidden');
+  input.focus();
+
+  // Remove previous handlers to prevent duplicates
+  confirmBtn.onclick = null;
+  cancelBtn.onclick = null;
+
+  // Add button
+  confirmBtn.onclick = function() {
+    const sectionName = input.value.trim();
+    if (sectionName === '') {
+      showNotification('Section name cannot be empty', 'error');
+      input.focus();
+      return;
+    }
+
+    // Submit form
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.style.display = 'none';
+
+    const flag = document.createElement('input');
+    flag.type = 'hidden';
+    flag.name = 'add_section';
+    flag.value = '1';
     form.appendChild(flag);
 
-    const nameInput = document.createElement("input");
-    nameInput.type = "hidden";
-    nameInput.name = "section_name";
-    nameInput.value = sectionName.trim();
+    const nameInput = document.createElement('input');
+    nameInput.type = 'hidden';
+    nameInput.name = 'section_name';
+    nameInput.value = sectionName;
     form.appendChild(nameInput);
 
     document.body.appendChild(form);
     form.submit();
-  }
+
+    modal.classList.add('hidden');
+  };
+
+  // Cancel button
+  cancelBtn.onclick = function() {
+    modal.classList.add('hidden');
+  };
 }
+
 
 function removeSectionPrompt() {
   const activeTab = document.querySelector('.nav-link.active');
   if (!activeTab) {
-    alert('No section is currently selected.');
+    showNotification('No section is currently selected.', 'error');
     return;
   }
-  
+
   const sectionId = activeTab.getAttribute('data-section-id');
   const sectionName = activeTab.textContent.trim();
-  
+
   if (!sectionId) {
-    alert('Unable to determine the current section.');
+    showNotification('Unable to determine the current section.', 'error');
     return;
   }
-  
-  const confirmed = confirm('Are you sure you want to remove the section "' + sectionName + '"? This will delete all cards in this section.');
-  if (!confirmed) return;
-  
-  const form = document.createElement('form');
-  form.method = 'POST';
-  form.style.display = 'none';
-  
-  const flag = document.createElement('input');
-  flag.type = 'hidden';
-  flag.name = 'delete_section';
-  flag.value = '1';
-  form.appendChild(flag);
-  
-  const idInput = document.createElement('input');
-  idInput.type = 'hidden';
-  idInput.name = 'section_id';
-  idInput.value = sectionId;
-  form.appendChild(idInput);
-  
-  document.body.appendChild(form);
-  form.submit();
+
+  // Show custom modal instead of confirm()
+  const modal = document.getElementById('confirmModal');
+  const message = document.getElementById('confirmMessage');
+  const yesBtn = document.getElementById('confirmYes');
+  const cancelBtn = document.getElementById('confirmCancel');
+
+  message.textContent = `Are you sure you want to remove the section "${sectionName}"? This will delete all cards in this section.`;
+
+  // Show modal
+  modal.classList.remove('hidden');
+
+  // Remove old click handlers
+  yesBtn.onclick = null;
+  cancelBtn.onclick = null;
+
+  // Yes button
+  yesBtn.onclick = function() {
+    modal.classList.add('hidden');
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.style.display = 'none';
+
+    const flag = document.createElement('input');
+    flag.type = 'hidden';
+    flag.name = 'delete_section';
+    flag.value = '1';
+    form.appendChild(flag);
+
+    const idInput = document.createElement('input');
+    idInput.type = 'hidden';
+    idInput.name = 'section_id';
+    idInput.value = sectionId;
+    form.appendChild(idInput);
+
+    document.body.appendChild(form);
+    form.submit();
+  };
+
+  // Cancel button
+  cancelBtn.onclick = function() {
+    modal.classList.add('hidden');
+  };
 }
+
 </script>
 
 </body>

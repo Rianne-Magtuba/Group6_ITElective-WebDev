@@ -33,36 +33,51 @@ if (isset($_POST['register'])) {
     $password = password_hash($rawPassword, PASSWORD_DEFAULT);
     
     if(registerAccount($username, $email, $password)){
-       echo "<script>alert('Registration successful! Please login.'); window.location.href = 'index.php';</script>";
+      echo "<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    showNotification('Registration successful! Please login.', 'success');
+    setTimeout(function () {
+      window.location.href = 'index.php';
+    }, 2000);
+  });
+</script>";
+
     } else {
-       echo "<script>alert('Registration failed. Email may already be in use.'); window.location.href = 'index.php';</script>";
+        echo "<script>
+          document.addEventListener('DOMContentLoaded', function () {
+            showNotification('Registration failed. Email may already be in use.', 'error');
+          });
+        </script>";
     }
 }
 
 // LOGIN HANDLER
-if(isset($_POST['login'])){
+if (isset($_POST['login'])) {
     $email = trim($_POST['loginEmail']);
     $password = $_POST['loginPass'];
-    
-    if(empty($email)){
-       echo "<script>alert('Email is required'); window.location.href = 'index.php';</script>";
-       exit();
-    } else if(empty($password)){
-       echo "<script>alert('Password is required'); window.location.href = 'index.php';</script>";
-       exit();
-    }
-    
-    if(loginAccount($email, $password)){
-        echo "<script>alert('Login successful!'); window.location.href = 'index.php';</script>";
-    } else {
-        echo "<script>alert('Invalid email or password.'); window.location.href = 'index.php';</script>";
+
+    if (empty($email)) {
+        $loginError = "Email is required.";
+    } 
+    else if (empty($password)) {
+        $loginError = "Password is required.";
+    } 
+    else if (!loginAccount($email, $password)) {
+        $loginError = "Invalid email or password.";
+    } 
+    else {
+        echo "<script>window.location.href='index.php';</script>";
+        exit();
     }
 }
 
 // DELETE SUBJECT HANDLER
 if (isset($_POST['delete_subject'])) {
     if (!isLoggedIn()) {
-        echo "<script>alert('Please login first.'); window.location.href = 'index.php';</script>";
+       echo "<script>
+                showNotification('Please login first.', 'error');
+                setTimeout(() => { window.location.href = 'index.php'; }, 3000);
+              </script>";
         exit();
     }
     
@@ -78,17 +93,33 @@ if (isset($_POST['delete_subject'])) {
             file_exists($subject['image_path'])) {
             unlink($subject['image_path']);
         }
-        
-        echo "<script>alert('Subject deleted successfully!'); window.location.href = 'index.php';</script>";
+        echo "<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    showNotification('Subject deleted successfully!', 'success');
+    setTimeout(function () {
+      window.location.href = 'index.php';
+    }, 2000);
+  });
+</script>";
+
+
     } else {
-        echo "<script>alert('Failed to delete subject. You may not own this subject.'); window.location.href = 'index.php';</script>";
+         
+           echo "<script>
+          document.addEventListener('DOMContentLoaded', function () {
+            showNotification('Failed to delete subject. You may not own this subject.', 'error');
+          });
+        </script>";
     }
 }
 
 // ADD SUBJECT HANDLER
 if (isset($_POST['add_subject'])) {
     if (!isLoggedIn()) {
-        echo "<script>alert('Please login first.'); window.location.href = 'index.php';</script>";
+         echo "<script>
+                showNotification('Please login first.', 'error');
+                setTimeout(() => { window.location.href = 'index.php'; }, 3000);
+              </script>";
         exit();
     }
     
@@ -129,21 +160,37 @@ if (isset($_POST['add_subject'])) {
                 if (move_uploaded_file($fileTmpPath, $destPath)) {
                     $imagePath = $destPath;
                 } else {
-                    echo "<script>alert('Error uploading image. Using default image.');</script>";
+                     echo "<script>showNotification('Error uploading image. Using default image.', 'error');</script>";
                 }
             } else {
-                echo "<script>alert('File size exceeds 5MB. Using default image.');</script>";
+                 echo "<script>showNotification('File size exceeds 5MB. Using default image.', 'error');</script>";
             }
         } else {
-            echo "<script>alert('Invalid file type. Using default image.');</script>";
+            echo "<script>showNotification('Invalid file type. Using default image.', 'error');</script>";
         }
     }
     
     $subjectId = addSubject($subjectName, $displayName, $description, $imagePath, getCurrentUserId());
     if ($subjectId) {
-        echo "<script>alert('Subject created successfully!'); window.location.href = 'index.php';</script>";
+         echo "<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    showNotification('Subject created successfully!', 'success');
+    setTimeout(function () {
+      window.location.href = 'index.php';
+    }, 2000);
+  });
+</script>";
+
     } else {
-        echo "<script>alert('Failed to create subject.'); window.location.href = 'index.php';</script>";
+        echo "<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    showNotification('Failed to create subject.', 'error');
+    setTimeout(function () {
+      window.location.href = 'index.php';
+    }, 2000);
+  });
+</script>";
+
     }
 }
 ?>
@@ -160,53 +207,7 @@ if (isset($_POST['add_subject'])) {
     <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans&display=swap" rel="stylesheet">
     <link href="css/styles.css" rel="stylesheet" />
     <style>
-      #searchSuggestions {
     
-        position: absolute;
-        background: white;
-        border: 1px solid #000000;
-        border-radius: 8px;
-        max-height: 300px;
-        overflow-y: auto;
-        width: 100%;
-        z-index: 1000;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        display: none;
-        margin-top: 5px;
-      }
-      .suggestion-item {
-  padding: 12px 16px;
-  cursor: pointer;
-  border-bottom: 1px solid #010000;
-  transition: background-color 0.2s;
-}
-.suggestion-item strong {
-  color: #000000;
-}
-      .suggestion-item:hover {
-        background-color: #f8f9fa;
-      }
-      .suggestion-item:last-child {
-        border-bottom: none;
-      }
-      .no-results {
-        padding: 12px 16px;
-        color: #6c757d;
-        text-align: center;
-      }
-      .search-wrapper {
-        position: relative;
-        width: 100%;
-        max-width: 500px;
-      }
-      .subject-highlight {
-        animation: highlightPulse 0.6s ease;
-      }
-      @keyframes highlightPulse {
-        0% { transform: scale(1); }
-        50% { transform: scale(1.05); box-shadow: 0 0 20px rgba(0, 123, 255, 0.5); }
-        100% { transform: scale(1); }
-      }
     </style>
   </head>
  
@@ -214,6 +215,7 @@ if (isset($_POST['add_subject'])) {
   <!-- Navbar -->
 <nav id="navbar" class="navbar navbar-expand-lg navbar-light fixed-top shadow-sm">
   <div class="container">
+
     <a class="navbar-brand d-flex align-items-center" href="#">
       <i class="fa-solid fa-lightbulb fa-lg me-2"></i> CramTayo
     </a>
@@ -223,27 +225,52 @@ if (isset($_POST['add_subject'])) {
     </button>
 
     <div class="collapse navbar-collapse" id="navbarMenu">
-      <ul class="navbar-nav ms-auto">
-        <li class="nav-item"><a class="nav-link active" href="#home">Home</a></li>
-        <li class="nav-item"><a class="nav-link" href="#subjects">Subjects</a></li>
-        <li class="nav-item"><a class="nav-link" href="#ab">About</a></li>
-      </ul>
+      <ul class="navbar-nav ms-auto align-items-lg-center">
 
-      <!-- Sign In/Out Button -->
-      <div class="ms-lg-3 mt-3 mt-lg-0">
+        <li class="nav-item">
+          <a class="nav-link active" href="#home">Home</a>
+        </li>
+
+        <li class="nav-item">
+          <a class="nav-link" href="#subjects">Subjects</a>
+        </li>
+
+        <li class="nav-item">
+          <a class="nav-link" href="#ab">About</a>
+        </li>
+
         <?php if (isLoggedIn()): ?>
-          <span class="text-light me-3">Welcome, <?php echo htmlspecialchars(getCurrentUsername()); ?>!</span>
-          <a href="?logout=1" class="btn btn-outline-light rounded-pill">Sign Out</a>
+
+          <li class="nav-item">
+            <span class="nav-link disabled">
+              Welcome, <?php echo htmlspecialchars(getCurrentUsername()); ?>!
+            </span>
+          </li>
+
+          <li class="nav-item ms-lg-2">
+            <a href="?logout=1" id="signInBtn" class="btn btn-outline-light rounded-pill">
+              Sign Out
+            </a>
+          </li>
+
         <?php else: ?>
-          <button id="signInBtn" class="btn btn-outline-light rounded-pill ms-3" 
-                  data-bs-toggle="modal" data-bs-target="#authMainModal">
-            Sign In
-          </button>
+
+          <li class="nav-item ms-lg-3">
+            <button id="signInBtn"
+              class="btn btn-outline-light rounded-pill"
+              data-bs-toggle="modal"
+              data-bs-target="#loginEmailModal">
+              Sign In
+            </button>
+          </li>
+
         <?php endif; ?>
-      </div>
+
+      </ul>
     </div>
   </div>
 </nav>
+
 
 
   <!-- Photo Section -->
@@ -321,7 +348,7 @@ if (isset($_POST['add_subject'])) {
               <i class="fas fa-lock fa-4x mb-3 text-muted"></i>
               <h5 class="card-title cardTxt">Login to Add Subjects</h5>
               <p class="card-text text-muted">Sign in to create your own study materials</p>
-              <button class="btn btn-primary mt-2" data-bs-toggle="modal" data-bs-target="#authMainModal">
+              <button class="btn btn-primary mt-2" data-bs-toggle="modal" data-bs-target="#loginEmailModal">
                 Sign In
               </button>
             </div>
@@ -457,70 +484,42 @@ if (isset($_POST['add_subject'])) {
   </div>
 </footer>
 
+<!-- Notification Popup -->
+<div id="notify" class="notify hidden">
+  <span id="notifyMessage"></span>
+</div>
 
-
-<!-- MAIN SIGN-IN MODAL -->
-<div class="modal fade" id="authMainModal" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered modal-wide">
-    <div class="modal-content p-4">
-
-      <div class="modal-header border-0 pb-1">
-        <h5 class="modal-title fw-bold">Welcome to CramTayo!</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-
-      <div class="modal-body ">
-
-        <p class="text-muted mb-4 fs-5">where we cram regularly</p>
-
-        <!-- Google -->
-        <button class="btn btn-outline-dark w-100 py-2 mb-3">
-          <i class="fab fa-google me-2"></i> Continue with Google
-        </button>
-
-        <!-- Facebook -->
-        <button class="btn btn-primary w-100 py-2 mb-3">
-          <i class="fab fa-facebook me-2"></i> Continue with Facebook
-        </button>
-
-        <!-- Apple -->
-        <button class="btn btn-dark w-100 py-2 mb-4">
-          <i class="fab fa-apple me-2"></i> Continue with Apple
-        </button>
-
-        <div class="d-flex align-items-center my-4">
-          <div class="flex-grow-1 border-top "></div>
-          <span class="mx-3 text-muted">or continue with email</span>
-          <div class="flex-grow-1 border-top"></div>
-        </div>
-
-        <div class="d-flex justify-content-between">
-          <button class="btn btn-outline-secondary w-50 me-2 py-2"
-                  data-bs-target="#loginEmailModal" data-bs-toggle="modal">
-            Log in with Email
-          </button>
-
-          <button class="btn btn-outline-secondary w-50 py-2"
-                  data-bs-target="#registerEmailModal" data-bs-toggle="modal">
-            Sign up with Email
-          </button>
-        </div>
-
-      </div>
-    </div>
+<!-- Confirmation Modal -->
+<div id="confirmModal" class="hidden" style="
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #fff;
+    color: #000;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    z-index: 3000;
+    min-width: 300px;
+">
+  <p id="confirmMessage">Are you sure?</p>
+  <div style="text-align: right; margin-top: 15px;">
+    <button id="confirmYes" style="margin-right:10px;">Yes</button>
+    <button id="confirmCancel">Cancel</button>
   </div>
 </div>
+
+
+
 
 <!-- LOGIN WITH EMAIL MODAL -->
 <div class="modal fade" id="loginEmailModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered modal-wide">
     <div class="modal-content p-4">
 
-      <div class="modal-header border-0">
-        <button class="btn btn-link importantTxtColors fw-bold modal-back-btn"
-                data-bs-target="#authMainModal" data-bs-toggle="modal">
-          &lt; Log in with Email
-        </button>
+       <div class="modal-header border-0 pb-1">
+        <h5 class="modal-title fw-bold">Welcome to CramTayo!</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
 
@@ -531,13 +530,18 @@ if (isset($_POST['add_subject'])) {
         <input type="email" name = "loginEmail" class="form-control mb-4 py-2">
 
         <label class="form-label">Password</label>
-        <input type="password" name = "loginPass" class="form-control mb-2 py-2">
+<input type="password" name="loginPass" class="form-control mb-4 py-2">
 
-        <div class="text-end mb-4">
-          <a href="#" class="importantTxtColors small">Forgot password?</a>
-        </div>
+<!-- ERROR MESSAGE -->
+<?php if (!empty($loginError)) : ?>
+  <div class="alert alert-danger py-2 mb-3">
+    <?= $loginError ?>
+  </div>
+<?php endif; ?>
 
-        <button type="submit" name="login" class="btn btn-primary w-100 py-2 mb-3">Log In</button>
+<button type="submit" name="login" class="btn btn-primary w-100 py-2 mb-3">
+  Log In
+</button>
         </form>
 
         <p class="text-center mt-3">
@@ -559,18 +563,17 @@ if (isset($_POST['add_subject'])) {
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content p-3">
 
-      <div class="modal-header border-0">
-        <button class="btn btn-link importantTxtColors"
-                data-bs-target="#authMainModal" data-bs-toggle="modal">
-          &lt; Register with Email
-        </button>
+      <div class="modal-header border-0 pb-1">
+        <h5 class="modal-title fw-bold">Welcome to CramTayo!</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
 
       <div class="modal-body">
       <form action="" method="post"> 
         <label class="form-label">Username</label>
-        <input type="text" name="username" class="form-control mb-3" required>
+        <input type="text" name="username" class="form-control mb-3" required minlength="3">
+
+
 
         <label class="form-label">Email</label>
         <input type="email" name="email" class="form-control mb-3" required>
@@ -671,25 +674,34 @@ function searchSubjects(query) {
 
 function handleSearch(event) {
   event.preventDefault();
+
   const query = document.getElementById('searchInput').value.trim();
-  
+  const suggestionsDiv = document.getElementById('searchSuggestions');
+
   if (!query) {
+    suggestionsDiv.style.display = 'none';
     return false;
   }
-  
+
   const lowerQuery = query.toLowerCase();
-  const match = subjectsData.find(subject => 
+  const match = subjectsData.find(subject =>
     subject.display_name.toLowerCase().includes(lowerQuery)
   );
-  
+
   if (match) {
+    suggestionsDiv.style.display = 'none';
     scrollToSubject(match.id);
   } else {
-    alert('No subject found matching "' + query + '"');
+    // SHOW "No results" instead of alert
+    suggestionsDiv.innerHTML = `
+      <div class="no-results">No results</div>
+    `;
+    suggestionsDiv.style.display = 'block';
   }
-  
+
   return false;
 }
+
 
 function scrollToSubject(subjectId) {
   const subjectCard = document.getElementById('subject-' + subjectId);
@@ -751,7 +763,7 @@ function previewImage(event) {
     
     const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
     if (!validTypes.includes(file.type)) {
-      alert('Please select a valid image file (JPG, PNG, or GIF)');
+      showNotification('Please select a valid image file (JPG, PNG, or GIF)', 'error');
       event.target.value = '';
       document.getElementById('imagePreview').style.display = 'none';
       return;
@@ -769,14 +781,67 @@ function previewImage(event) {
 }
 
 function deleteSubjectCard(subjectId) {
-  if (confirm('Are you sure you want to delete this subject? This will remove all associated data.')) {
+  const modal = document.getElementById('confirmModal');
+  const message = document.getElementById('confirmMessage');
+  const yesBtn = document.getElementById('confirmYes');
+  const cancelBtn = document.getElementById('confirmCancel');
+
+  // Set the message
+  message.textContent = 'Are you sure you want to delete this subject? This will remove all associated data.';
+
+  // Show modal
+  modal.classList.remove('hidden');
+
+  // Remove any previous click handlers to prevent duplicates
+  yesBtn.onclick = null;
+  cancelBtn.onclick = null;
+
+  // Yes button
+  yesBtn.onclick = function() {
+    modal.classList.add('hidden');
+
     const form = document.createElement('form');
     form.method = 'POST';
     form.innerHTML = '<input type="hidden" name="delete_subject" value="' + subjectId + '">';
     document.body.appendChild(form);
     form.submit();
-  }
+  };
+
+  // Cancel button
+  cancelBtn.onclick = function() {
+    modal.classList.add('hidden');
+  };
 }
+
+
+function showNotification(message, type = "info", duration = 3000) {
+  const notify = document.getElementById("notify");
+  const notifyMessage = document.getElementById("notifyMessage");
+
+  notify.className = `notify ${type}`;
+  notifyMessage.textContent = message;
+
+  // Show
+  notify.classList.remove("hidden");
+
+  // Auto hide
+  setTimeout(() => {
+    notify.classList.add("hidden");
+  }, duration);
+}
+
     </script>
-  </body>
+ 
+<?php if (!empty($loginError)) : ?>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const loginModal = new bootstrap.Modal(
+      document.getElementById('loginEmailModal')
+    );
+    loginModal.show();
+  });
+</script>
+<?php endif; ?>
+
+</body>
 </html>
