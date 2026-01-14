@@ -251,6 +251,23 @@ section {
 }
 
 /*  Modal Styles */
+#modalBackdrop {
+  position: fixed;
+  inset: 0; /* top:0; left:0; right:0; bottom:0; */
+  background: rgba(0, 0, 0, 0.5); /* dark semi-transparent overlay */
+  z-index: 2500; /* make sure it's below modal but above page content */
+}
+#confirmModal {
+  z-index: 3000;
+}
+
+.hidden {
+  display: none !important;
+}
+
+
+
+
 .modal-wide {
     max-width: 550px;
 }

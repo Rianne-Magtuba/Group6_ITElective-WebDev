@@ -594,6 +594,8 @@ text-align: left;
   </div>
 </div>
 
+<div id="modalBackdrop" class="hidden"></div>
+
 
 <!-- View Card Modal -->
 <div class="modal fade" id="viewCardModal" tabindex="-1" aria-hidden="true">
@@ -930,14 +932,39 @@ function viewCard(title, content, imagePath) {
 
 function deleteCard(id, event) {
   event.stopPropagation();
-  if (confirm("Are you sure you want to delete this card?")) {
+
+  const modal = document.getElementById('confirmModal');
+  const message = document.getElementById('confirmMessage');
+  const yesBtn = document.getElementById('confirmYes');
+  const cancelBtn = document.getElementById('confirmCancel');
+  const backdrop = document.getElementById('modalBackdrop');
+
+  message.textContent = "Are you sure you want to delete this card?";
+
+  // Show modal and overlay
+  backdrop.classList.remove('hidden');
+  modal.classList.remove('hidden');
+
+  // Set buttons
+  yesBtn.onclick = function () {
+    modal.classList.add('hidden');
+    backdrop.classList.add('hidden');
+
     const form = document.createElement("form");
     form.method = "POST";
-    form.innerHTML = "<input type=\"hidden\" name=\"delete_id\" value=\"" + id + "\">";
+    form.innerHTML = `<input type="hidden" name="delete_id" value="${id}">`;
     document.body.appendChild(form);
     form.submit();
-  }
+  };
+
+  cancelBtn.onclick = function () {
+    modal.classList.add('hidden');
+    backdrop.classList.add('hidden');
+  };
 }
+
+
+
 
 
 function viewCardFromData(element) {
@@ -1102,11 +1129,13 @@ function showAddSectionModal() {
   const input = document.getElementById('newSectionName');
   const confirmBtn = document.getElementById('addSectionConfirm');
   const cancelBtn = document.getElementById('addSectionCancel');
+  const backdrop = document.getElementById('modalBackdrop'); // overlay div
 
   // Reset input
   input.value = '';
 
-  // Show modal
+  // Show modal + overlay
+  backdrop.classList.remove('hidden');
   modal.classList.remove('hidden');
   input.focus();
 
@@ -1143,14 +1172,18 @@ function showAddSectionModal() {
     document.body.appendChild(form);
     form.submit();
 
+    // Hide modal + overlay
     modal.classList.add('hidden');
+    backdrop.classList.add('hidden');
   };
 
   // Cancel button
   cancelBtn.onclick = function() {
     modal.classList.add('hidden');
+    backdrop.classList.add('hidden');
   };
 }
+
 
 
 function removeSectionPrompt() {
@@ -1212,6 +1245,8 @@ function removeSectionPrompt() {
     modal.classList.add('hidden');
   };
 }
+
+
 
 </script>
 
