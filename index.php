@@ -513,11 +513,7 @@ if (isset($_POST['add_subject'])) {
     z-index: 3000;
     min-width: 300px;
 ">
-  <p id="confirmMessage">Are you sure?</p>
-  <div style="text-align: right; margin-top: 15px;">
-    <button id="confirmYes" style="margin-right:10px;">Yes</button>
-    <button id="confirmCancel">Cancel</button>
-  </div>
+  
 </div>
 
 
