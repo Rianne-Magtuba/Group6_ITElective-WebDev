@@ -640,8 +640,8 @@ if (isset($_POST['add_subject'])) {
       <input type="hidden" name="add_subject" value="1">
       
   <label style="display: block; margin-bottom: 5px; font-weight: bold;">Subject Name:</label>
-<input type="text" name="display_name" id="displayName" placeholder="e.g., Systems Integration and Architecture" maxlength="40" required style="width: 100%; padding: 8px; margin-bottom: 5px; border: 1px solid #ccc; border-radius: 4px;">
-<div id="subjectNameCharCounter" style="text-align: right; font-size: 0.85rem; color: #666; margin-bottom: 15px;">0/40</div>
+<input type="text" name="display_name" id="displayName" placeholder="e.g., Systems Integration and Architecture" maxlength="30" required style="width: 100%; padding: 8px; margin-bottom: 5px; border: 1px solid #ccc; border-radius: 4px;">
+<div id="subjectNameCharCounter" style="text-align: right; font-size: 0.85rem; color: #666; margin-bottom: 15px;">0/30</div>
       
       <label style="display: block; margin-bottom: 5px; font-weight: bold;">Description:</label>
       <textarea name="description" id="description" placeholder="Brief description of the subject" required style="width: 100%; padding: 8px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; height: 80px; resize: vertical;"></textarea>
@@ -774,7 +774,7 @@ function showAddSubjectModal() {
   
   // Reset form and counter
   form.reset();
-  charCounter.textContent = '0/40';
+  charCounter.textContent = '0/30';
   charCounter.style.color = '#666';
   charCounter.style.fontWeight = 'normal';
   
@@ -784,12 +784,12 @@ function showAddSubjectModal() {
   // Character counter listener
   input.oninput = function() {
     const length = input.value.length;
-    charCounter.textContent = `${length}/40`;
+    charCounter.textContent = `${length}/30`;
     
-    if (length >= 40) {
+    if (length >= 30) {
       charCounter.style.color = '#dc2626';
       charCounter.style.fontWeight = 'bold';
-    } else if (length >= 35) {
+    } else if (length >= 25) {
       charCounter.style.color = '#f59e0b';
     } else {
       charCounter.style.color = '#666';
