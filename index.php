@@ -205,6 +205,8 @@ if (isset($_POST['add_subject'])) {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" >
+
     <link href="css/styles.css" rel="stylesheet" />
     <style>
 
@@ -535,8 +537,16 @@ if (isset($_POST['add_subject'])) {
               <form action="" method="post"> 
         <input type="email" name = "loginEmail" class="form-control mb-4 py-2">
 
-        <label class="form-label">Password</label>
-<input type="password" name="loginPass" class="form-control mb-4 py-2">
+      <label class="form-label">Password</label>
+<div class="position-relative mb-4">
+  <input type="password" name="loginPass" id="loginPass" class="form-control py-2">
+  <button type="button" id="togglePassword" class="btn position-absolute"
+          style="top: 50%; right: 10px; transform: translateY(-50%); padding: 0.25rem 0.5rem;">
+    <i class="bi bi-eye"></i>
+ 
+  </button>
+</div>
+
 
 <!-- ERROR MESSAGE -->
 <?php if (!empty($loginError)) : ?>
@@ -584,8 +594,17 @@ if (isset($_POST['add_subject'])) {
         <label class="form-label">Email</label>
         <input type="email" name="email" class="form-control mb-3" required>
 
-        <label class="form-label">Password</label>
-        <input type="password" name="password" class="form-control mb-4" required>
+      <label class="form-label">Password</label>
+<div class="position-relative mb-4">
+  <input type="password" name="password" id="registerPass" class="form-control py-2" required>
+  
+  <button type="button" id="toggleRegisterPassword" class="btn position-absolute"
+          style="top: 50%; right: 10px; transform: translateY(-50%); padding: 0.25rem 0.5rem;">
+    <i class="bi bi-eye"></i>
+   
+  </button>
+</div>
+
 
         <button type="submit" name="register" class="btn btn-success w-100 mb-3">Register</button>
       </form>
@@ -835,6 +854,30 @@ function showNotification(message, type = "info", duration = 3000) {
     notify.classList.add("hidden");
   }, duration);
 }
+
+function setupPasswordToggle(passwordInputId, toggleBtnId) {
+  const passwordInput = document.getElementById(passwordInputId);
+  const toggleBtn = document.getElementById(toggleBtnId);
+  const icon = toggleBtn.querySelector('i');
+
+  if (!passwordInput || !toggleBtn || !icon) return;
+
+  toggleBtn.addEventListener('click', () => {
+    if (passwordInput.type === 'password') {
+      passwordInput.type = 'text';
+      icon.classList.remove('bi-eye');
+      icon.classList.add('bi-eye-slash');
+    } else {
+      passwordInput.type = 'password';
+      icon.classList.remove('bi-eye-slash');
+      icon.classList.add('bi-eye');
+    }
+  });
+}
+
+// Initialize for this password field
+setupPasswordToggle('registerPass', 'toggleRegisterPassword');
+setupPasswordToggle('loginPass', 'togglePassword');
 
     </script>
  
