@@ -1415,4 +1415,3 @@ function renderStudyCardWithView($card) {
 }
 ?>
 
-in this code i want to make it so in the quiz section, everytime i answer that i got it right or wrong to flip back when goin to the next question
