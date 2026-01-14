@@ -354,6 +354,9 @@ text-align: left;
     .quiz-controls .btn {
       min-width: 120px;
     }
+      .hidden {
+  display: none !important;
+}
   </style>
 </head>
 <body>

@@ -207,7 +207,17 @@ if (isset($_POST['add_subject'])) {
     <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans&display=swap" rel="stylesheet">
     <link href="css/styles.css" rel="stylesheet" />
     <style>
-    
+
+      /* Hidden */
+.notify.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -10px); /* moves slightly up when hidden */
+}
+    .hidden {
+  display: none !important;
+}
+
     </style>
   </head>
  
