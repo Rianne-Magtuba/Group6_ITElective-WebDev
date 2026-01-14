@@ -312,13 +312,17 @@ function addStudyCardWithImage($subjectId, $sectionId, $title, $content, $cardTy
         return false;
     }
 }
-function updateStudyCard($cardId, $title, $content) {
+function updateStudyCardFull($cardId, $title, $content, $cardType = 'normal', $imagePath = null) {
     try {
         $pdo = getDBConnection();
-        $stmt = $pdo->prepare("UPDATE study_cards SET title = ?, content = ? WHERE id = ?");
-        return $stmt->execute([$title, $content, $cardId]);
+        $stmt = $pdo->prepare(
+            "UPDATE study_cards 
+             SET title = ?, content = ?, card_type = ?, image_path = ? 
+             WHERE id = ?"
+        );
+        return $stmt->execute([$title, $content, $cardType, $imagePath, $cardId]);
     } catch (PDOException $e) {
-        error_log("Update study card error: " . $e->getMessage());
+        error_log("Update study card full error: " . $e->getMessage());
         return false;
     }
 }
