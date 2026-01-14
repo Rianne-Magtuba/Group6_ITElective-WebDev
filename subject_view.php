@@ -199,6 +199,50 @@ $sections = getSections($subjectId);
   <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans&display=swap" rel="stylesheet">
   <link href="css/styles.css" rel="stylesheet" />
   <style>
+
+    .card-description {
+    font-size: 0.95rem;
+    line-height: 1.4;
+    color: #444;
+    margin-top: 8px;
+
+    display: -webkit-box;
+    -webkit-line-clamp: 3;        /* number of lines shown */
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    }
+
+    #viewCardModal .card-content {
+    white-space: pre-wrap;      /* keeps line breaks */
+    word-wrap: break-word;      /* legacy support */
+    overflow-wrap: break-word;  /* modern browsers */
+    word-break: break-word;     /* force-break long strings */
+    }
+
+    .quiz-flashcard-back .card-content {
+    width: 100%;
+    max-width: 100%;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    word-break: break-word;
+
+    overflow-x: hidden;
+    }
+
+    .quiz-flashcard-back .card-content {
+    max-height: 280px;
+    overflow-y: auto;
+    }
+
+    #viewCardModal .card-content {
+    display: block !important;
+    -webkit-line-clamp: unset !important;
+    -webkit-box-orient: unset !important;
+    overflow: visible !important;
+    white-space: pre-wrap;
+    }
+
     .review-card {
       position: relative;
       cursor: pointer;
@@ -306,7 +350,7 @@ $sections = getSections($subjectId);
       line-height: 1.6;
       width: 100%;
       white-space: pre-wrap;
-text-align: left;
+      text-align: center;
     }
     
     .quiz-card-image {
@@ -403,6 +447,10 @@ text-align: left;
       <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
   <?php endif; ?>
+
+  <div class="mb-3">
+    <input type="text" id="cardSearchInput" class="form-control" placeholder="Search cards by title..." onkeyup="filterCards()">
+  </div>
 
   <?php if (empty($sections)): ?>
     <div class="text-center py-5">
@@ -508,6 +556,7 @@ text-align: left;
       <div class="modal-body">
         <div class="text-center mb-4">
           <div class="quiz-progress" id="quizProgress">Card 1 of 1</div>
+          <div class="fw-bold text-muted" id="quizScore">Score: 0 / 0</div>
         </div>
         
         <div class="quiz-flashcard" id="quizFlashcard" onclick="flipCard()">
@@ -527,6 +576,16 @@ text-align: left;
               <div class="quiz-hint mt-3">
                 <i class="fas fa-hand-pointer me-2"></i>Click to flip back
               </div>
+
+	<div class="quiz-controls mt-3" id="answerControls" style="display: none;">
+        <button class="btn btn-success" onclick="markAnswer(true)">
+         ✅ I got it right
+        </button>
+        <button class="btn btn-danger" onclick="markAnswer(false)">
+        ❌ I got it wrong
+        </button>
+        </div>
+
             </div>
           </div>
         </div>
@@ -742,6 +801,22 @@ text-align: left;
 let quizCards = [];
 let currentQuizIndex = 0;
 let isFlipped = false;
+let score = 0;
+let answeredCards = new Set();
+
+function filterCards() {
+  const input = document.getElementById('cardSearchInput').value.toLowerCase();
+  const cards = document.querySelectorAll('.review-card');
+
+  cards.forEach(card => {
+    const title = card.getAttribute('data-card-title') || '';
+    if (title.toLowerCase().includes(input)) {
+      card.style.display = ''; // show
+    } else {
+      card.style.display = 'none'; // hide
+    }
+  });
+}
 
 function startQuizMode() {
   // Show section selection modal instead of directly starting quiz
@@ -753,6 +828,10 @@ function selectQuizSection(sectionId) {
   // Close section selection modal
   const selectModal = bootstrap.Modal.getInstance(document.getElementById('sectionSelectModal'));
   selectModal.hide();
+
+  score = 0;
+  answeredCards.clear();
+  updateScoreDisplay();
   
   // Collect all cards data
   const cardsData = <?php 
@@ -818,55 +897,93 @@ function displayCurrentCard() {
   
   const card = quizCards[currentQuizIndex];
   
-  // Update progress
+  // Reset logic
+  isFlipped = false;
+  const flashcard = document.getElementById('quizFlashcard');
+  if (flashcard) {
+      flashcard.classList.remove('flipped'); // This is the key line
+  }
+
+  // Update Progress and Content
   document.getElementById('quizProgress').textContent = `Card ${currentQuizIndex + 1} of ${quizCards.length}`;
-  
-  // Update card content
   document.getElementById('quizCardTitle').textContent = card.title;
   document.getElementById('quizCardContent').textContent = card.content;
   
-  // Handle image
-  const imageContainer = document.getElementById('quizCardImageContainer');
-  const imageElement = document.getElementById('quizCardImage');
+  // ... rest of your image handling code ...
   
-  if (card.image_path && card.image_path !== '') {
-    imageElement.src = card.image_path;
-    imageContainer.style.display = 'block';
-  } else {
-    imageContainer.style.display = 'none';
-  }
-  
-  // Reset flip state
-  isFlipped = false;
-  document.getElementById('quizFlashcard').classList.remove('flipped');
-  
-  // Update button states
-  document.getElementById('prevBtn').disabled = currentQuizIndex === 0;
-  document.getElementById('nextBtn').disabled = currentQuizIndex === quizCards.length - 1;
+  // Hide answer buttons initially for the new card
+  document.getElementById('answerControls').style.display = 'none';
 }
-
 function flipCard() {
   isFlipped = !isFlipped;
   const flashcard = document.getElementById('quizFlashcard');
-  
+  const controls = document.getElementById('answerControls');
+
   if (isFlipped) {
     flashcard.classList.add('flipped');
+    controls.style.display = 'flex';
   } else {
     flashcard.classList.remove('flipped');
+    controls.style.display = 'none';
   }
+}
+
+function markAnswer(isCorrect) {
+  const cardId = quizCards[currentQuizIndex].id;
+
+  // Prevent double scoring for the same card
+  if (answeredCards.has(cardId)) return;
+  answeredCards.add(cardId);
+  
+  if (isCorrect) {
+    score++;
+  }
+  updateScoreDisplay();
+
+  // Visual feedback: Optional, but you could change the button colors here
+  // to show the choice was registered.
+  
+  // We do NOT flip the card or move to the next index here.
+  // The user will click the "Next" button manually.
+}
+
+function updateScoreDisplay() {
+  document.getElementById('quizScore').textContent =
+    `Score: ${score} / ${quizCards.length}`;
 }
 
 function nextCard() {
   if (currentQuizIndex < quizCards.length - 1) {
-    currentQuizIndex++;
-    displayCurrentCard();
+    // 1. Clear the answer text first so it's not seen during the flip
+    document.getElementById('quizCardContent').textContent = "";
+    
+    // 2. Flip back to front
+    isFlipped = false;
+    document.getElementById('quizFlashcard').classList.remove('flipped');
+    document.getElementById('answerControls').style.display = 'none';
+
+    // 3. Move to next card after a tiny delay for the flip animation
+    setTimeout(() => {
+      currentQuizIndex++;
+      displayCurrentCard();
+    }, 200); 
+  } else {
+    alert("You've reached the end of the quiz! Final Score: " + score + " / " + quizCards.length);
   }
 }
 
 function previousCard() {
   if (currentQuizIndex > 0) {
-    currentQuizIndex--;
-    displayCurrentCard();
+    // Clear content and flip back
+    document.getElementById('quizCardContent').textContent = "";
+    isFlipped = false;
+    document.getElementById('quizFlashcard').classList.remove('flipped');
+    document.getElementById('answerControls').style.display = 'none';
+
+    setTimeout(() => {
+      currentQuizIndex--;
+      displayCurrentCard();
+    }, 200);
   }
 }
 
@@ -883,8 +1000,15 @@ function shuffleCards() {
 
 function resetQuiz() {
   currentQuizIndex = 0;
+  score = 0;
+  answeredCards.clear();
   isFlipped = false;
+
   document.getElementById('quizFlashcard').classList.remove('flipped');
+  document.getElementById('answerControls').style.display = 'none';
+
+  updateScoreDisplay();
+  displayCurrentCard();
 }
 
 // Keyboard navigation for quiz mode
@@ -1285,8 +1409,10 @@ function renderStudyCardWithView($card) {
     }
     
     // Display content
-    echo '<div>' . nl2br(htmlspecialchars($card['content'])) . '</div>';
+    echo '<div class="card-description">' . htmlspecialchars($card['content']) . '</div>';
     
     echo '</div>';
 }
 ?>
+
+in this code i want to make it so in the quiz section, everytime i answer that i got it right or wrong to flip back when goin to the next question
