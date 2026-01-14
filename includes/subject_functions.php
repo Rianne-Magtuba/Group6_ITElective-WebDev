@@ -123,7 +123,7 @@ function addCardWithImage($subjectId, $sectionName, $title, $content, $cardType 
  * Update a study card
  */
 function updateCard($cardId, $title, $content) {
-    return updateStudyCard($cardId, $title, $content);
+    return updateStudyCardFull($cardId, $title, $content);
 }
 
 /**
