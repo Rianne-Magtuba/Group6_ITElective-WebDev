@@ -1768,24 +1768,27 @@ function removeSectionPrompt() {
     return;
   }
 
-  // Show custom modal instead of confirm()
   const modal = document.getElementById('confirmModal');
   const message = document.getElementById('confirmMessage');
   const yesBtn = document.getElementById('confirmYes');
   const cancelBtn = document.getElementById('confirmCancel');
+  const backdrop = document.getElementById('modalBackdrop'); // 👈 add this
 
-  message.textContent = `Are you sure you want to remove the section "${sectionName}"? This will delete all cards in this section.`;
+  message.textContent =
+    `Are you sure you want to remove the section "${sectionName}"? This will delete all cards in this section.`;
 
-  // Show modal
+  // Show modal + overlay
   modal.classList.remove('hidden');
+  backdrop.classList.remove('hidden');
 
   // Remove old click handlers
   yesBtn.onclick = null;
   cancelBtn.onclick = null;
 
   // Yes button
-  yesBtn.onclick = function() {
+  yesBtn.onclick = function () {
     modal.classList.add('hidden');
+    backdrop.classList.add('hidden');
 
     const form = document.createElement('form');
     form.method = 'POST';
@@ -1808,10 +1811,12 @@ function removeSectionPrompt() {
   };
 
   // Cancel button
-  cancelBtn.onclick = function() {
+  cancelBtn.onclick = function () {
     modal.classList.add('hidden');
+    backdrop.classList.add('hidden');
   };
 }
+
 
 
 

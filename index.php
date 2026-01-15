@@ -535,7 +535,9 @@ if (isset($_POST['add_subject'])) {
 
         <label class="form-label mt-2">Email Address</label>
               <form action="" method="post"> 
-        <input type="email" name = "loginEmail" class="form-control mb-4 py-2">
+        <input type="email" name = "loginEmail" class="form-control mb-4 py-2"   required
+       pattern="^[^@\s]+@[^@\s]+\.[a-zA-Z]{2,}$"
+       title="Please enter a valid email (example@domain.com)">
 
       <label class="form-label">Password</label>
 <div class="position-relative mb-4">
@@ -592,7 +594,9 @@ if (isset($_POST['add_subject'])) {
 
 
         <label class="form-label">Email</label>
-        <input type="email" name="email" class="form-control mb-3" required>
+        <input type="email" name="email" class="form-control mb-3" required 
+       pattern="^[^@\s]+@[^@\s]+\.[a-zA-Z]{2,}$"
+       title="Please enter a valid email (example@domain.com)">
 
       <label class="form-label">Password</label>
 <div class="position-relative mb-4">
