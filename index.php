@@ -515,6 +515,23 @@ if (isset($_POST['add_subject'])) {
     z-index: 3000;
     min-width: 300px;
 ">
+  <p id="confirmMessage">Are you sure?</p>
+  <div style="text-align: right; margin-top: 15px;">
+    <button id="confirmYes" style="margin-right:10px; background-color: #dc2626; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">Yes</button>
+    <button id="confirmCancel" style="background-color: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">Cancel</button>
+  </div>
+</div>
+
+<!-- Modal Backdrop -->
+<div id="modalBackdrop" class="hidden" style="
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 2999;
+"></div>
   
 </div>
 
@@ -843,6 +860,7 @@ function previewImage(event) {
 
 function deleteSubjectCard(subjectId) {
   const modal = document.getElementById('confirmModal');
+  const backdrop = document.getElementById('modalBackdrop');
   const message = document.getElementById('confirmMessage');
   const yesBtn = document.getElementById('confirmYes');
   const cancelBtn = document.getElementById('confirmCancel');
@@ -850,7 +868,8 @@ function deleteSubjectCard(subjectId) {
   // Set the message
   message.textContent = 'Are you sure you want to delete this subject? This will remove all associated data.';
 
-  // Show modal
+  // Show modal and backdrop
+  backdrop.classList.remove('hidden');
   modal.classList.remove('hidden');
 
   // Remove any previous click handlers to prevent duplicates
@@ -860,6 +879,7 @@ function deleteSubjectCard(subjectId) {
   // Yes button
   yesBtn.onclick = function() {
     modal.classList.add('hidden');
+    backdrop.classList.add('hidden');
 
     const form = document.createElement('form');
     form.method = 'POST';
@@ -871,6 +891,7 @@ function deleteSubjectCard(subjectId) {
   // Cancel button
   cancelBtn.onclick = function() {
     modal.classList.add('hidden');
+    backdrop.classList.add('hidden');
   };
 }
 
